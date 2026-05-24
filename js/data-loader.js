@@ -1,14 +1,12 @@
 // ============================================================
-// data-loader.js — Ambil & parse data dari Google Sheets
+// data-loader.js — Fetch & parse data dari Google Sheets
+// Phase 5.3: tambah getRejectionDetail, improved error handling
 // ============================================================
 
-// Cache sederhana pakai sessionStorage (hilang saat tab ditutup)
-const CACHE_TTL_MS = CONFIG.AUTO_REFRESH_MINUTES * 60 * 1000 || 600000;
+const CACHE_TTL_MS = (CONFIG.AUTO_REFRESH_MINUTES || 10) * 60 * 1000;
 
 function cacheSet(key, data) {
-  try {
-    sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
-  } catch(e) { /* sessionStorage penuh, skip */ }
+  try { sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
 }
 
 function cacheGet(key) {
@@ -21,48 +19,50 @@ function cacheGet(key) {
   } catch(e) { return null; }
 }
 
-// ── Parse format gviz Google Sheets (format aneh tapi reliable) ──
+// ── Parse gviz response dari Google Sheets ─────────────────
 function parseGviz(rawText) {
-  // Google Sheets bungkus JSON dengan "/*O_o*/\ngoogle.visualization.Query.setResponse(...);"
-  const clean = rawText
-    .replace(/^[^{]*/, '')  // hapus prefix
-    .replace(/\);?\s*$/, '') // hapus suffix
-    .trim();
-  const gviz = JSON.parse(clean);
+  try {
+    const clean = rawText.replace(/^[^{]*/, '').replace(/\);?\s*$/, '').trim();
+    const gviz  = JSON.parse(clean);
+    if (!gviz.table || !gviz.table.cols) return [];
 
-  if (!gviz.table || !gviz.table.cols) return [];
+    const headers = gviz.table.cols.map(c =>
+      String(c.label || c.id || '').trim().toLowerCase().replace(/\s+/g, '_')
+    );
 
-  // Ambil nama kolom dari header
-  const headers = gviz.table.cols.map(c => c.label || c.id || '');
-
-  // Konversi setiap row ke object
-  return (gviz.table.rows || []).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => {
-      const cell = row.c ? row.c[i] : null;
-      obj[h] = cell ? (cell.v !== null && cell.v !== undefined ? cell.v : '') : '';
-    });
-    return obj;
-  }).filter(row => Object.values(row).some(v => v !== ''));
-}
-
-// ── Fetch satu tab dari Google Sheets ──
-async function fetchSheet(sheetName, limit = 500) {
-  const cacheKey = `sheet_${sheetName}_${limit}`;
-  const cached = cacheGet(cacheKey);
-  if (cached) return cached;
-
-  // Cek apakah Sheet ID sudah diisi
-  if (!CONFIG.SHEET_ID || CONFIG.SHEET_ID === 'PASTE_SHEET_ID_DISINI') {
-    console.warn('Sheet ID belum diisi di config.js');
+    return (gviz.table.rows || []).map(row => {
+      const obj = {};
+      headers.forEach((h, i) => {
+        const cell = row.c ? row.c[i] : null;
+        let val = cell ? (cell.v !== null && cell.v !== undefined ? cell.v : '') : '';
+        // Konversi Date object ke string YYYY-MM-DD
+        if (val instanceof Date) val = val.toISOString().split('T')[0];
+        obj[h] = val;
+      });
+      return obj;
+    }).filter(row => Object.values(row).some(v => v !== ''));
+  } catch(e) {
+    console.error('parseGviz error:', e);
     return [];
   }
+}
 
-  // URL tanpa TQL query — lebih reliable, limit diterapkan di client
+// ── Fetch satu tab dari Google Sheets ──────────────────────
+async function fetchSheet(sheetName, useCache = true) {
+  const cacheKey = `gsheet_${sheetName}`;
+  if (useCache) {
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
+  }
+
+  if (!CONFIG.SHEET_ID || CONFIG.SHEET_ID === 'PASTE_SHEET_ID_DISINI') {
+    throw new Error('Sheet ID belum diisi di config.js');
+  }
+
   const url = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
 
   const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`Gagal fetch ${sheetName}: HTTP ${resp.status}`);
+  if (!resp.ok) throw new Error(`Gagal fetch ${sheetName}: HTTP ${resp.status}. Pastikan Sheet sudah di-share publik (Viewer).`);
 
   const text = await resp.text();
   const data = parseGviz(text);
@@ -70,63 +70,62 @@ async function fetchSheet(sheetName, limit = 500) {
   return data;
 }
 
-// ── Public API ──
+// ── Public API ─────────────────────────────────────────────
 
-// Ambil target KPI dari tab KPI_TARGETS
+async function getDailyInputs() {
+  return await fetchSheet('DAILY_INPUT');
+}
+
+async function getMonthlySummary() {
+  return await fetchSheet('MONTHLY_SUMMARY');
+}
+
+async function getRejectionDetail() {
+  return await fetchSheet('REJECTION_DETAIL');
+}
+
 async function getKPITargets() {
-  const rows = await fetchSheet('KPI_TARGETS', 50);
-  const map = {};
+  const rows = await fetchSheet('KPI_TARGETS');
+  const map  = {};
   rows.forEach(r => {
     if (r.kpi_id) map[r.kpi_id] = {
-      target: parseFloat(r.target) || 0,
-      unit: r.unit || '',
+      target:        parseFloat(r.target) || 0,
+      unit:          r.unit || '',
       lowerIsBetter: String(r.lower_is_better).toUpperCase() === 'TRUE',
     };
   });
   return map;
 }
 
-// Ambil data harian dari DAILY_INPUT
-async function getDailyInputs(limit = 200) {
-  return await fetchSheet('DAILY_INPUT', limit);
-}
-
-// Ambil monthly summary dari MONTHLY_SUMMARY
-async function getMonthlySummary() {
-  return await fetchSheet('MONTHLY_SUMMARY', 50);
-}
-
-// Invalidate cache paksa (untuk manual refresh)
 function clearCache() {
-  const keys = Object.keys(sessionStorage).filter(k => k.startsWith('sheet_'));
-  keys.forEach(k => sessionStorage.removeItem(k));
+  Object.keys(sessionStorage)
+    .filter(k => k.startsWith('gsheet_'))
+    .forEach(k => sessionStorage.removeItem(k));
 }
 
-// ── Submit form ke Apps Script ──
+// ── Submit form ke Apps Script ──────────────────────────────
 async function submitData(sheetName, formData) {
   if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL === 'PASTE_APPS_SCRIPT_URL_DISINI') {
     throw new Error('Apps Script URL belum diisi di config.js');
   }
 
   const payload = {
-    sheet_name: sheetName,
+    sheet_name:    sheetName,
     operator_code: CONFIG.OPERATOR_SECRET,
     ...formData,
   };
 
-  // Content-Type: text/plain menghindari CORS preflight
   const resp = await fetch(CONFIG.APPS_SCRIPT_URL, {
-    method: 'POST',
+    method:  'POST',
     headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload),
+    body:    JSON.stringify(payload),
   });
 
-  if (!resp.ok) throw new Error(`HTTP error: ${resp.status}`);
+  if (!resp.ok) throw new Error(`Server error: HTTP ${resp.status}`);
 
   const result = await resp.json();
   if (result.status !== 'ok') throw new Error(result.message || 'Submit gagal');
 
-  // Invalidate cache agar data baru langsung tampil
   clearCache();
   return result;
 }

@@ -4,42 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>KPI Dashboard — Iron Foundry FY2026</title>
-
-  <!-- Tailwind CSS (utility classes, no build needed) -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Apache ECharts (chart library) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
-
-  <!-- Custom styles -->
   <link rel="stylesheet" href="css/styles.css">
-
-  <!-- Config harus dimuat PERTAMA -->
   <script src="config.js"></script>
 </head>
-<body class="bg-gray-50 min-h-screen" style="font-family: system-ui, -apple-system, sans-serif;">
+<body class="bg-gray-50 min-h-screen" style="font-family:system-ui,-apple-system,sans-serif">
 
-<!-- ── TOAST NOTIFICATION ── -->
 <div id="toast" class="toast"></div>
 
 <!-- ── HEADER ── -->
 <header class="app-header">
-  <!-- Logo / nama perusahaan -->
-  <div class="flex items-center gap-2 flex-1">
-    <div style="width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+  <div class="flex items-center gap-2 flex-1 min-w-0">
+    <div style="width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
     </div>
-    <div>
-      <div id="company-name" style="font-size:14px;font-weight:600;line-height:1.2">KPI Dashboard</div>
-      <div style="font-size:10px;opacity:0.7;line-height:1">Iron Foundry · FY2026</div>
+    <div class="min-w-0">
+      <div id="header-company" style="font-size:14px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">KPI Dashboard</div>
+      <div style="font-size:10px;opacity:0.65;line-height:1">Iron Foundry · FY2026</div>
     </div>
   </div>
-
-  <!-- Last updated & refresh -->
-  <div class="flex items-center gap-3">
-    <span id="last-updated" style="font-size:11px;opacity:0.6;display:none"></span>
-    <button onclick="manualRefresh()" title="Refresh data"
-      style="background:rgba(255,255,255,0.12);border:none;border-radius:6px;padding:6px 8px;cursor:pointer;color:white;display:flex;align-items:center;gap:4px;font-size:12px">
+  <div class="flex items-center gap-2 flex-shrink-0">
+    <span id="last-updated" style="font-size:10px;opacity:0.6;display:none"></span>
+    <button onclick="manualRefresh()" style="background:rgba(255,255,255,0.12);border:none;border-radius:6px;padding:6px 10px;cursor:pointer;color:white;display:flex;align-items:center;gap:4px;font-size:12px">
       <svg id="refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
       <span class="hidden sm:inline">Refresh</span>
     </button>
@@ -47,347 +34,210 @@
 </header>
 
 <!-- ── TAB NAVIGATION ── -->
-<nav class="tab-nav bg-white shadow-sm">
-  <button class="tab-btn active" onclick="switchTab('dashboard', this)">
-    📊 Dashboard
-  </button>
-  <button class="tab-btn" onclick="switchTab('input', this)">
-    ✏️ Input Harian
-  </button>
-  <button class="tab-btn" onclick="switchTab('history', this)">
-    📋 Riwayat
-  </button>
+<nav class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+  <button class="tab-btn" onclick="switchTab('input',this)">✏️ Input Harian</button>
+  <button class="tab-btn" onclick="switchTab('history',this)">📋 Riwayat</button>
 </nav>
 
-<!-- ════════════════════════════════════════════
-  VIEW 1: DASHBOARD
-════════════════════════════════════════════ -->
-<div id="view-dashboard" class="view p-4 max-w-7xl mx-auto">
+<!-- ════════════════════ VIEW: DASHBOARD ════════════════════ -->
+<div id="view-dashboard" class="view p-3 max-w-7xl mx-auto">
 
   <!-- Period selector -->
-  <div class="period-bar flex items-center gap-2 mb-4 overflow-x-auto pb-1">
-    <span style="font-size:12px;color:#6b7280;white-space:nowrap">Periode:</span>
+  <div class="flex items-center gap-2 mb-3 overflow-x-auto pb-1 flex-wrap">
+    <span style="font-size:12px;color:#6b7280;white-space:nowrap;flex-shrink:0">Periode:</span>
     <button class="period-btn active" onclick="setPeriod('today',this)">Hari Ini</button>
     <button class="period-btn" onclick="setPeriod('week',this)">7 Hari</button>
     <button class="period-btn" onclick="setPeriod('month',this)">Bulan Ini</button>
-    <button class="period-btn" onclick="setPeriod('ytd',this)">YTD</button>
+    <button class="period-btn" onclick="setPeriod('ytd',this)">YTD FY26</button>
+    <div id="completeness-badge" style="display:none;margin-left:auto;font-size:11px;padding:3px 10px;border-radius:20px;background:#E6F1FB;color:#0C447C;white-space:nowrap;flex-shrink:0"></div>
   </div>
 
-  <!-- Loading state -->
+  <!-- Loading -->
   <div id="dash-loading" class="flex flex-col items-center justify-center py-16 gap-4">
     <div class="spinner"></div>
     <p style="font-size:13px;color:#9ca3af">Memuat data dari Google Sheets...</p>
   </div>
 
-  <!-- Error state -->
+  <!-- Error -->
   <div id="dash-error" class="hidden">
     <div style="background:#FDECEA;border-radius:10px;padding:20px;text-align:center">
-      <div style="font-size:32px;margin-bottom:8px">⚠️</div>
-      <div style="font-size:14px;font-weight:600;color:#C62828;margin-bottom:4px">Gagal memuat data</div>
-      <div id="dash-error-msg" style="font-size:12px;color:#9ca3af;margin-bottom:12px"></div>
+      <div style="font-size:28px;margin-bottom:8px">⚠️</div>
+      <div style="font-size:14px;font-weight:600;color:#C62828;margin-bottom:6px">Gagal memuat data</div>
+      <div id="dash-error-msg" style="font-size:12px;color:#6b7280;margin-bottom:14px;max-width:360px;margin-left:auto;margin-right:auto"></div>
       <button onclick="loadDashboard()" class="period-btn active">Coba Lagi</button>
     </div>
   </div>
 
-  <!-- Dashboard content (tersembunyi saat loading) -->
+  <!-- Content -->
   <div id="dash-content" class="hidden">
 
-    <!-- Empty state banner -->
-    <div id="dash-empty-banner" style="display:none;background:#FFF8E1;border-radius:8px;padding:10px 14px;font-size:12px;color:#E65100;margin-bottom:12px;border-left:3px solid #E65100">
-    </div>
+    <!-- Empty banner -->
+    <div id="dash-empty-banner" style="display:none;background:#FFF8E1;border-radius:8px;padding:9px 13px;font-size:12px;color:#E65100;margin-bottom:10px;border-left:3px solid #E65100"></div>
 
     <!-- KPI Scorecard -->
-    <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">
-      KPI Scorecard
-    </div>
-    <div id="kpi-grid" class="kpi-grid grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6"></div>
+    <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">KPI Scorecard</div>
+    <div id="kpi-grid" class="kpi-grid grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-5"></div>
 
-    <!-- Charts 2x2 -->
-    <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">
-      Trend Produksi & Kualitas
-    </div>
-    <div class="chart-grid grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-      <div class="chart-box">
-        <div class="chart-title">Mold/Hour — ACE-1 vs ACE-2</div>
-        <div id="chart-moldh" style="height:220px"></div>
-      </div>
-      <div class="chart-box">
-        <div class="chart-title">Rejection Rate %</div>
-        <div id="chart-reject" style="height:220px"></div>
-      </div>
-      <div class="chart-box">
-        <div class="chart-title">Productivity % — ACE-1 & ACE-2</div>
-        <div id="chart-prod" style="height:220px"></div>
-      </div>
-      <div class="chart-box">
-        <div class="chart-title">Electrical Efficiency (kWH)</div>
-        <div id="chart-energy" style="height:220px"></div>
-      </div>
+    <!-- Section: Trend Charts (2x2) -->
+    <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Trend Produksi & Kualitas</div>
+    <div class="chart-grid grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+      <div class="chart-box"><div class="chart-title">Mold/Hour — ACE-1 vs ACE-2</div><div id="chart-moldh" style="height:200px"></div></div>
+      <div class="chart-box"><div class="chart-title">Rejection Rate %</div><div id="chart-reject" style="height:200px"></div></div>
+      <div class="chart-box"><div class="chart-title">Productivity % (Bar)</div><div id="chart-prod" style="height:200px"></div></div>
+      <div class="chart-box"><div class="chart-title">Electrical Energy (kWH/hari)</div><div id="chart-energy" style="height:200px"></div></div>
     </div>
 
-    <!-- Alert section -->
-    <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">
-      ⚠️ Alert — KPI Perlu Perhatian
-    </div>
-    <div id="alert-section" class="mb-6">
-      <div style="background:#F9FAFB;border-radius:10px;padding:16px;text-align:center;color:#9ca3af;font-size:13px">
-        Tidak ada alert
-      </div>
+    <!-- Section: Rejection Pareto -->
+    <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Rejection Pareto — By Defect Category</div>
+    <div class="chart-box mb-5">
+      <div class="chart-title">Top Defect Categories (Pareto Chart) <span id="pareto-total" style="font-weight:400;color:#9ca3af"></span></div>
+      <div id="chart-pareto" style="height:220px"></div>
     </div>
 
-  </div><!-- end dash-content -->
+    <!-- Section: Alerts -->
+    <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">⚠️ KPI Alert</div>
+    <div id="alert-section" class="mb-4"></div>
+
+  </div>
 </div>
 
-<!-- ════════════════════════════════════════════
-  VIEW 2: INPUT HARIAN
-════════════════════════════════════════════ -->
-<div id="view-input" class="view hidden p-4 max-w-2xl mx-auto pb-24">
-
-  <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+<!-- ════════════════════ VIEW: INPUT HARIAN ════════════════════ -->
+<div id="view-input" class="view hidden p-3 max-w-2xl mx-auto pb-24">
+  <div class="bg-white rounded-xl shadow-sm p-4 mb-3">
     <div style="font-size:15px;font-weight:600;color:#1B2A4A;margin-bottom:2px">Input Data Harian</div>
-    <div style="font-size:12px;color:#9ca3af">Isi semua field lalu tekan Submit. Data langsung tersimpan ke Google Sheets.</div>
+    <div style="font-size:12px;color:#9ca3af">Isi semua field lalu Submit. Data tersimpan otomatis ke Google Sheets.</div>
   </div>
-
   <form id="daily-form" onsubmit="handleSubmit(event)" novalidate>
 
-    <!-- IDENTITAS SHIFT -->
     <div class="section-head">👤 Identitas Shift</div>
     <div class="bg-white rounded-xl p-4 space-y-3">
-
       <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="form-label">Tanggal *</label>
-          <input type="date" id="f-date" class="form-input" required>
-        </div>
-        <div>
-          <label class="form-label">Shift *</label>
+        <div><label class="form-label">Tanggal *</label><input type="date" id="f-date" class="form-input" required></div>
+        <div><label class="form-label">Shift *</label>
           <select id="f-shift" class="form-input" required>
-            <option value="">Pilih shift</option>
-            <option>Shift 1</option>
-            <option>Shift 2</option>
-            <option>Shift 3</option>
+            <option value="">Pilih...</option>
+            <option>Shift 1</option><option>Shift 2</option><option>Shift 3</option>
           </select>
         </div>
       </div>
-
-      <div>
-        <label class="form-label">Nama / Kode Operator</label>
-        <input type="text" id="f-operator" class="form-input" placeholder="Contoh: Budi / OPR-01">
-      </div>
-
+      <div><label class="form-label">Nama Operator</label><input type="text" id="f-operator" class="form-input" placeholder="Nama / Kode operator"></div>
     </div>
 
-    <!-- ACE-1 -->
     <div class="section-head">🔵 Produksi ACE-1</div>
     <div class="bg-white rounded-xl p-4 space-y-3">
-
       <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="form-label">Mold/Hour actual</label>
-          <input type="number" id="f-ace1-moldh" class="form-input" min="0" max="200" step="0.1" placeholder="148.5">
-          <div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 148.5 Mold/H</div>
-        </div>
-        <div>
-          <label class="form-label">Output (Mold)</label>
-          <input type="number" id="f-ace1-output" class="form-input" min="0" step="1" placeholder="1180">
-        </div>
+        <div><label class="form-label">Mold/Hour actual</label><input type="number" id="f-ace1-moldh" class="form-input" min="0" max="200" step="0.1" placeholder="148.5"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 148.5</div></div>
+        <div><label class="form-label">Output (Mold)</label><input type="number" id="f-ace1-output" class="form-input" min="0" step="1" placeholder="1180"></div>
       </div>
-
       <div>
-        <label class="form-label">Loss Time (%) — total harus ≤ 100</label>
+        <label class="form-label">Loss Time % <span style="color:#9ca3af">(BDT | PourWait | Loss Mold | Other)</span></label>
         <div class="grid grid-cols-4 gap-2">
-          <div>
-            <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">BDT</div>
-            <input type="number" id="f-ace1-bdt" class="form-input" min="0" max="100" step="0.1" placeholder="0">
-          </div>
-          <div>
-            <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Pour Wait</div>
-            <input type="number" id="f-ace1-pw" class="form-input" min="0" max="100" step="0.1" placeholder="0">
-          </div>
-          <div>
-            <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Loss Mold</div>
-            <input type="number" id="f-ace1-mold" class="form-input" min="0" max="100" step="0.1" placeholder="0">
-          </div>
-          <div>
-            <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Other</div>
-            <input type="number" id="f-ace1-other" class="form-input" min="0" max="100" step="0.1" placeholder="0">
-          </div>
+          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">BDT</div><input type="number" id="f-ace1-bdt" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
+          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">PW</div><input type="number" id="f-ace1-pw" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
+          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Mold</div><input type="number" id="f-ace1-mold" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
+          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Other</div><input type="number" id="f-ace1-other" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
         </div>
-        <!-- Prod% kalkulasi otomatis -->
-        <div style="font-size:12px;color:#374151;margin-top:6px">
-          Prod% dihitung otomatis: <span id="ace1-prod-calc" style="font-weight:600;color:#1B2A4A">—</span>
-        </div>
+        <div style="font-size:12px;color:#374151;margin-top:5px">Prod%: <span id="ace1-prod-calc" style="font-weight:600;color:#1B2A4A">—</span></div>
       </div>
-
       <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="form-label">Reject (pcs)</label>
-          <input type="number" id="f-ace1-reject" class="form-input" min="0" step="1" placeholder="0">
-        </div>
-        <div>
-          <label class="form-label">Reject % (auto)</label>
-          <input type="text" id="f-ace1-reject-pct" class="form-input" readonly style="background:#f9fafb" placeholder="—">
-        </div>
+        <div><label class="form-label">Reject (pcs)</label><input type="number" id="f-ace1-reject" class="form-input" min="0" step="1" placeholder="0"></div>
+        <div><label class="form-label">Reject % (auto)</label><input type="text" id="f-ace1-reject-pct" class="form-input" readonly style="background:#f9fafb" placeholder="—"></div>
       </div>
-
     </div>
 
-    <!-- ACE-2 -->
     <div class="section-head">🟠 Produksi ACE-2</div>
     <div class="bg-white rounded-xl p-4 space-y-3">
-
       <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="form-label">Mold/Hour actual</label>
-          <input type="number" id="f-ace2-moldh" class="form-input" min="0" max="200" step="0.1" placeholder="148.5">
-          <div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 148.5 Mold/H</div>
-        </div>
-        <div>
-          <label class="form-label">Output (Mold)</label>
-          <input type="number" id="f-ace2-output" class="form-input" min="0" step="1" placeholder="1180">
-        </div>
+        <div><label class="form-label">Mold/Hour actual</label><input type="number" id="f-ace2-moldh" class="form-input" min="0" max="200" step="0.1" placeholder="148.5"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 148.5</div></div>
+        <div><label class="form-label">Output (Mold)</label><input type="number" id="f-ace2-output" class="form-input" min="0" step="1" placeholder="1180"></div>
       </div>
-
       <div>
-        <label class="form-label">Loss Time (%) — total harus ≤ 100</label>
+        <label class="form-label">Loss Time % <span style="color:#9ca3af">(BDT | PW | Mold | Other)</span></label>
         <div class="grid grid-cols-4 gap-2">
           <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">BDT</div><input type="number" id="f-ace2-bdt" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
-          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Pour Wait</div><input type="number" id="f-ace2-pw" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
-          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Loss Mold</div><input type="number" id="f-ace2-mold" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
+          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">PW</div><input type="number" id="f-ace2-pw" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
+          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Mold</div><input type="number" id="f-ace2-mold" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
           <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Other</div><input type="number" id="f-ace2-other" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
         </div>
-        <div style="font-size:12px;color:#374151;margin-top:6px">
-          Prod% dihitung otomatis: <span id="ace2-prod-calc" style="font-weight:600;color:#1B2A4A">—</span>
-        </div>
+        <div style="font-size:12px;color:#374151;margin-top:5px">Prod%: <span id="ace2-prod-calc" style="font-weight:600;color:#1B2A4A">—</span></div>
       </div>
-
       <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="form-label">Reject (pcs)</label>
-          <input type="number" id="f-ace2-reject" class="form-input" min="0" step="1" placeholder="0">
-        </div>
-        <div>
-          <label class="form-label">Reject % (auto)</label>
-          <input type="text" id="f-ace2-reject-pct" class="form-input" readonly style="background:#f9fafb" placeholder="—">
-        </div>
+        <div><label class="form-label">Reject (pcs)</label><input type="number" id="f-ace2-reject" class="form-input" min="0" step="1" placeholder="0"></div>
+        <div><label class="form-label">Reject % (auto)</label><input type="text" id="f-ace2-reject-pct" class="form-input" readonly style="background:#f9fafb" placeholder="—"></div>
       </div>
-
     </div>
 
-    <!-- FINISHING & CORE -->
     <div class="section-head">🟢 Finishing & Core</div>
     <div class="bg-white rounded-xl p-4">
       <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="form-label">Finishing Prod% (0-100)</label>
-          <input type="number" id="f-finishing" class="form-input" min="0" max="100" step="0.1" placeholder="94">
-          <div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 94%</div>
-        </div>
-        <div>
-          <label class="form-label">Core Prod% (0-100)</label>
-          <input type="number" id="f-core" class="form-input" min="0" max="100" step="0.1" placeholder="97">
-          <div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 97%</div>
-        </div>
+        <div><label class="form-label">Finishing Prod% (0–100)</label><input type="number" id="f-finishing" class="form-input" min="0" max="100" step="0.1" placeholder="94"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 94%</div></div>
+        <div><label class="form-label">Core Prod% (0–100)</label><input type="number" id="f-core" class="form-input" min="0" max="100" step="0.1" placeholder="97"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 97%</div></div>
       </div>
     </div>
 
-    <!-- SAFETY -->
     <div class="section-head">🛡️ Safety</div>
     <div class="bg-white rounded-xl p-4 space-y-3">
       <div>
         <label class="form-label">Ada insiden hari ini?</label>
-        <div class="flex gap-3">
+        <div class="flex gap-4">
           <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer">
-            <input type="radio" name="safety" id="safety-no" value="0" checked onchange="toggleSafetyDetail(false)">
-            Tidak ada
+            <input type="radio" name="safety" id="safety-no" value="0" checked onchange="toggleSafety(false)"> Tidak ada
           </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;color:#C62828">
-            <input type="radio" name="safety" id="safety-yes" value="1" onchange="toggleSafetyDetail(true)">
-            Ada insiden
+            <input type="radio" name="safety" id="safety-yes" value="1" onchange="toggleSafety(true)"> Ada insiden
           </label>
         </div>
       </div>
       <div id="safety-detail" class="hidden space-y-3">
-        <div>
-          <label class="form-label">Kategori insiden</label>
+        <div><label class="form-label">Kategori</label>
           <select id="f-safety-type" class="form-input">
-            <option value="">Pilih kategori</option>
-            <option>Work Accident</option>
-            <option>Fire Accident</option>
-            <option>Traffic Accident</option>
-            <option>Near Miss</option>
+            <option value="">Pilih...</option>
+            <option>Work Accident</option><option>Fire Accident</option>
+            <option>Traffic Accident</option><option>Near Miss</option>
           </select>
         </div>
-        <div>
-          <label class="form-label">Deskripsi singkat</label>
-          <input type="text" id="f-safety-desc" class="form-input" placeholder="Jelaskan kejadian...">
-        </div>
+        <div><label class="form-label">Deskripsi</label><input type="text" id="f-safety-desc" class="form-input" placeholder="Jelaskan kejadian..."></div>
       </div>
     </div>
 
-    <!-- GENTANI / ENERGI -->
     <div class="section-head">⚡ Energi (Gentani)</div>
     <div class="bg-white rounded-xl p-4">
       <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="form-label">Electrical Furnace (kWH)</label>
-          <input type="number" id="f-furnace" class="form-input" min="0" step="1" placeholder="4400">
-          <div style="font-size:10px;color:#9ca3af;margin-top:2px">Total kWH hari ini</div>
-        </div>
-        <div>
-          <label class="form-label">Non-Furnace (kWH)</label>
-          <input type="number" id="f-nonfurnace" class="form-input" min="0" step="1" placeholder="1600">
-        </div>
+        <div><label class="form-label">Electrical Furnace (kWH)</label><input type="number" id="f-furnace" class="form-input" min="0" step="1" placeholder="4400"></div>
+        <div><label class="form-label">Non-Furnace (kWH)</label><input type="number" id="f-nonfurnace" class="form-input" min="0" step="1" placeholder="1600"></div>
       </div>
     </div>
 
-    <!-- CATATAN -->
     <div class="section-head">📝 Catatan</div>
     <div class="bg-white rounded-xl p-4">
-      <textarea id="f-notes" class="form-input" rows="3"
-        placeholder="Masalah khusus, breakdown, info penting lainnya... (opsional)"></textarea>
+      <textarea id="f-notes" class="form-input" rows="3" placeholder="Masalah khusus, info penting... (opsional)"></textarea>
     </div>
 
-    <!-- PREVIEW & SUBMIT -->
-    <div class="bg-white rounded-xl p-4 mt-4 space-y-3">
-      <div id="form-preview" class="hidden" style="background:#F0F9FF;border-radius:8px;padding:12px;font-size:12px;color:#374151;line-height:1.8"></div>
-
+    <!-- Preview & Submit -->
+    <div class="bg-white rounded-xl p-4 mt-3 space-y-3">
+      <div id="form-preview" class="hidden" style="background:#F0F9FF;border-radius:8px;padding:12px;font-size:12px;color:#374151;line-height:1.9"></div>
       <div id="form-error-msg" class="hidden" style="background:#FDECEA;border-radius:8px;padding:10px 12px;font-size:12px;color:#C62828"></div>
-
       <button type="button" onclick="previewForm()" class="period-btn w-full" style="border-color:#1B2A4A;color:#1B2A4A;font-size:13px;padding:10px">
         👁️ Preview sebelum submit
       </button>
-
-      <button type="submit" id="submit-btn" class="submit-btn w-full"
-        style="background:#1B2A4A;color:white;border:none;border-radius:8px;padding:14px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity 0.15s">
+      <button type="submit" id="submit-btn" style="width:100%;background:#1B2A4A;color:white;border:none;border-radius:8px;padding:14px;font-size:14px;font-weight:600;cursor:pointer">
         ✓ Submit Data
       </button>
     </div>
-
   </form>
 </div>
 
-<!-- ════════════════════════════════════════════
-  VIEW 3: RIWAYAT
-════════════════════════════════════════════ -->
-<div id="view-history" class="view hidden p-4 max-w-7xl mx-auto">
-
-  <div class="bg-white rounded-xl shadow-sm p-4 mb-4 flex items-center justify-between">
+<!-- ════════════════════ VIEW: RIWAYAT ════════════════════ -->
+<div id="view-history" class="view hidden p-3 max-w-7xl mx-auto">
+  <div class="bg-white rounded-xl shadow-sm p-4 mb-3 flex items-center justify-between">
     <div>
       <div style="font-size:14px;font-weight:600;color:#1B2A4A">Riwayat Input Harian</div>
       <div id="history-count" style="font-size:12px;color:#9ca3af">Memuat...</div>
     </div>
-    <button onclick="downloadCSV()" class="period-btn" style="border-color:#1B2A4A;color:#1B2A4A">
-      ⬇️ Download CSV
-    </button>
+    <button onclick="downloadCSV()" class="period-btn" style="border-color:#1B2A4A;color:#1B2A4A">⬇️ CSV</button>
   </div>
-
-  <!-- Loading -->
-  <div id="hist-loading" class="flex justify-center py-12">
-    <div class="spinner"></div>
-  </div>
-
-  <!-- Table -->
+  <div id="hist-loading" class="flex justify-center py-12"><div class="spinner"></div></div>
   <div id="hist-table" class="hidden bg-white rounded-xl shadow-sm overflow-hidden">
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -397,8 +247,8 @@
             <th style="padding:10px 12px;text-align:left">Shift</th>
             <th style="padding:10px 12px;text-align:right">ACE-1 Mold/H</th>
             <th style="padding:10px 12px;text-align:right">ACE-2 Mold/H</th>
-            <th style="padding:10px 12px;text-align:right">Reject ACE-1</th>
-            <th style="padding:10px 12px;text-align:right">Reject ACE-2</th>
+            <th style="padding:10px 12px;text-align:right">Rej% ACE-1</th>
+            <th style="padding:10px 12px;text-align:right">Rej% ACE-2</th>
             <th style="padding:10px 12px;text-align:center">Safety</th>
             <th style="padding:10px 12px;text-align:left">Operator</th>
           </tr>
@@ -407,28 +257,38 @@
       </table>
     </div>
   </div>
-
 </div>
 
-<!-- ── JS: UI Logic ── -->
+<!-- ── SCRIPTS ── -->
 <script src="js/data-loader.js"></script>
 <script src="js/kpi-engine.js"></script>
+<script src="js/charts.js"></script>
 <script>
-
-// ============================================================
-// NAVIGATION
-// ============================================================
-let currentView = 'dashboard';
+// ── State ─────────────────────────────────────────────────
+let currentView   = 'dashboard';
 let currentPeriod = 'today';
-let dashData = null;
+let _dailyRows    = null;
+let _monthlyRows  = null;
+let _rejRows      = null;
+let historyData   = [];
 
+// ── Toast ─────────────────────────────────────────────────
+let _toastTimer;
+function showToast(msg, type='info', ms=3500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ── Navigation ────────────────────────────────────────────
 function switchTab(view, btn) {
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('view-' + view).classList.remove('hidden');
+  document.getElementById('view-'+view).classList.remove('hidden');
   btn.classList.add('active');
   currentView = view;
-  if (view === 'dashboard' && !dashData) loadDashboard();
+  if (view === 'dashboard' && !_dailyRows) loadDashboard();
   if (view === 'history') loadHistory();
 }
 
@@ -436,85 +296,108 @@ function setPeriod(period, btn) {
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentPeriod = period;
-  if (dashData) renderDashboard(dashData);
+  if (_dailyRows !== null) renderDashboard();
 }
 
-// ============================================================
-// TOAST NOTIFICATION
-// ============================================================
-let toastTimer;
-function showToast(msg, type = 'info', duration = 3500) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast show ${type}`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), duration);
-}
-
-// ============================================================
-// DASHBOARD — Load & Render
-// ============================================================
+// ── Dashboard Load ─────────────────────────────────────────
 async function loadDashboard() {
   document.getElementById('dash-loading').classList.remove('hidden');
   document.getElementById('dash-content').classList.add('hidden');
   document.getElementById('dash-error').classList.add('hidden');
 
-  // Cek apakah config sudah diisi
   if (CONFIG.SHEET_ID === 'PASTE_SHEET_ID_DISINI') {
-    document.getElementById('dash-loading').classList.add('hidden');
-    document.getElementById('dash-error').classList.remove('hidden');
-    document.getElementById('dash-error-msg').textContent = 'Sheet ID belum diisi di config.js. Buka file config.js dan isi SHEET_ID dengan ID Google Sheet Anda.';
+    showDashError('Sheet ID belum diisi di config.js');
     return;
   }
 
   try {
-    const rows = await getDailyInputs(500);
-    dashData = rows;
-    renderDashboard(rows);
+    // Fetch 3 sumber data secara paralel
+    const [daily, monthly, rejection] = await Promise.allSettled([
+      getDailyInputs(),
+      getMonthlySummary(),
+      getRejectionDetail(),
+    ]);
 
-    // Update last updated
+    _dailyRows   = daily.status   === 'fulfilled' ? daily.value   : [];
+    _monthlyRows = monthly.status === 'fulfilled' ? monthly.value : [];
+    _rejRows     = rejection.status === 'fulfilled' ? rejection.value : [];
+
+    if (daily.status === 'rejected') throw daily.reason;
+
+    renderDashboard();
+
     const now = new Date().toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'});
-    const el = document.getElementById('last-updated');
-    el.textContent = 'Update: ' + now;
-    el.style.display = 'block';
+    const lu  = document.getElementById('last-updated');
+    lu.textContent = 'Update: ' + now; lu.style.display = 'block';
 
   } catch(err) {
-    document.getElementById('dash-loading').classList.add('hidden');
-    document.getElementById('dash-error').classList.remove('hidden');
-    document.getElementById('dash-error-msg').textContent = err.message;
+    showDashError(err.message);
   }
 }
 
-function renderDashboard(rows) {
+function showDashError(msg) {
+  document.getElementById('dash-loading').classList.add('hidden');
+  document.getElementById('dash-error').classList.remove('hidden');
+  document.getElementById('dash-error-msg').textContent = msg;
+}
+
+// ── Dashboard Render ───────────────────────────────────────
+function renderDashboard() {
   document.getElementById('dash-loading').classList.add('hidden');
   document.getElementById('dash-content').classList.remove('hidden');
 
-  const agg = aggregateDaily(rows, currentPeriod);
+  const rows  = _dailyRows || [];
+  let   agg   = aggregateDaily(rows, currentPeriod);
+  agg = injectMonthlyData(agg, _monthlyRows || [], currentPeriod);
 
-  // Tampilkan info jika tidak ada data untuk periode ini
-  const emptyBanner = document.getElementById('dash-empty-banner');
+  // Empty state
+  const banner = document.getElementById('dash-empty-banner');
   if (!agg && rows.length > 0) {
-    emptyBanner.textContent = `Tidak ada data untuk periode "${currentPeriod === 'today' ? 'Hari Ini' : currentPeriod === 'week' ? '7 Hari' : currentPeriod === 'month' ? 'Bulan Ini' : 'YTD'}". Scorecard menampilkan "No Data".`;
-    emptyBanner.style.display = 'block';
+    const labels = { today:'Hari Ini', week:'7 Hari', month:'Bulan Ini', ytd:'YTD FY26' };
+    banner.textContent = `Tidak ada data untuk periode "${labels[currentPeriod] || currentPeriod}". Scorecard menampilkan "No Data".`;
+    banner.style.display = 'block';
   } else if (rows.length === 0) {
-    emptyBanner.textContent = 'Belum ada data di Google Sheets. Isi form Input Harian untuk mulai.';
-    emptyBanner.style.display = 'block';
+    banner.textContent = 'Belum ada data. Isi tab Input Harian untuk mulai.';
+    banner.style.display = 'block';
   } else {
-    emptyBanner.style.display = 'none';
+    banner.style.display = 'none';
   }
 
-  const scorecard = buildScorecard(agg);
-  renderScorecard(scorecard);
+  // Completeness badge
+  const comp  = calcCompleteness(rows, currentPeriod);
+  const badge = document.getElementById('completeness-badge');
+  if (comp.filled > 0) {
+    badge.textContent  = `📋 ${comp.filled} shift (${comp.days} hari) | ${comp.pct}% lengkap`;
+    badge.style.display = 'block';
+    badge.style.background = comp.pct >= 80 ? '#E1F5EE' : '#FFF8E1';
+    badge.style.color      = comp.pct >= 80 ? '#085041' : '#633806';
+  } else {
+    badge.style.display = 'none';
+  }
 
-  const trend = buildTrendData(rows, 30);
-  renderCharts(trend);
-  renderAlerts(scorecard);
+  // Scorecard
+  const cards = buildScorecard(agg);
+  renderScorecard(cards);
+
+  // Charts
+  const trend  = buildTrendData(rows, 30);
+  const pareto = buildRejectPareto(_rejRows || []);
+
+  // Update pareto total label
+  const ptotal = document.getElementById('pareto-total');
+  if (pareto.total > 0) ptotal.textContent = `— Total: ${pareto.total.toLocaleString()} pcs`;
+  else ptotal.textContent = '';
+
+  renderAllCharts(trend, pareto);
+
+  // Alerts
+  renderAlerts(cards);
 }
 
 function renderScorecard(cards) {
   const grid = document.getElementById('kpi-grid');
   grid.innerHTML = cards.map(kpi => {
-    const style = kpi.style || RAG_STYLE['nodata']; // safeguard
+    const style = kpi.style || RAG_STYLE['nodata'];
     return `
     <div class="kpi-card">
       <div class="kpi-cat">${kpi.cat}</div>
@@ -527,312 +410,183 @@ function renderScorecard(cards) {
 }
 
 function renderAlerts(cards) {
+  const el     = document.getElementById('alert-section');
   const alerts = cards.filter(k => k.rag === 'red' || k.rag === 'amber');
-  const el = document.getElementById('alert-section');
   if (alerts.length === 0) {
-    el.innerHTML = '<div style="background:#E8F5E9;border-radius:10px;padding:16px;text-align:center;color:#1B5E20;font-size:13px">✓ Semua KPI dalam kondisi baik</div>';
+    el.innerHTML = '<div style="background:#E8F5E9;border-radius:10px;padding:14px;text-align:center;color:#1B5E20;font-size:13px">✓ Semua KPI dalam kondisi baik untuk periode ini</div>';
     return;
   }
-  el.innerHTML = alerts.map(a => `
+  el.innerHTML = alerts.map(a => {
+    const style = a.style || RAG_STYLE['nodata'];
+    const gap   = a.gapPct !== null ? ` | Gap: ${(a.gapPct*100).toFixed(1)}%` : '';
+    return `
     <div class="alert-item ${a.rag === 'amber' ? 'amber' : ''}">
       <div>
-        <div style="font-size:12px;font-weight:600">${a.cat} — ${a.label}</div>
-        <div style="font-size:11px;opacity:0.8">Actual: ${a.fmtActual} | Target: ${a.fmtTarget} ${a.unit}
-          ${a.gapPct !== null ? ` | Gap: ${a.lib ? '+' : ''}${(a.gapPct*100).toFixed(1)}%` : ''}</div>
+        <div style="font-size:12px;font-weight:600">${style.icon} ${a.cat} — ${a.label}</div>
+        <div style="font-size:11px;opacity:0.75;margin-top:2px">Actual: ${a.fmtActual} | Target: ${a.fmtTarget} ${a.unit}${gap}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
-// ── ECharts ──
-let charts = {};
-
-function renderCharts(data) {
-  const axisStyle = { type:'category', data: data.dates.map(d => d.replace(/^20\d\d-/,'')), axisLabel:{fontSize:10} };
-  const gridStyle = { top:30, right:10, bottom:30, left:45 };
-  const legend    = { bottom:0, textStyle:{fontSize:10} };
-
-  // Chart 1: Mold/H
-  initChart('chart-moldh', {
-    grid: gridStyle, legend,
-    xAxis: axisStyle,
-    yAxis: { type:'value', min:120, max:160, axisLabel:{fontSize:10} },
-    series: [
-      { name:'ACE-1', type:'line', data:data.ace1, smooth:true, lineStyle:{color:'#4472C4',width:2.5}, itemStyle:{color:'#4472C4'}, symbol:'none' },
-      { name:'ACE-2', type:'line', data:data.ace2, smooth:true, lineStyle:{color:'#ED7D31',width:2.5}, itemStyle:{color:'#ED7D31'}, symbol:'none' },
-      { name:'Target', type:'line', data:data.dates.map(()=>data.target_moldh), lineStyle:{color:'#C62828',width:1.5,type:'dashed'}, symbol:'none', itemStyle:{color:'#C62828'} },
-    ],
-    tooltip: { trigger:'axis', formatter: p => p.map(s=>`${s.seriesName}: ${s.value?.toFixed?.(1)||'—'}`).join('<br>') },
-  });
-
-  // Chart 2: Rejection
-  initChart('chart-reject', {
-    grid: gridStyle, legend,
-    xAxis: axisStyle,
-    yAxis: { type:'value', axisLabel:{fontSize:10, formatter: v=>(v*100).toFixed(1)+'%'} },
-    series: [
-      { name:'ACE-1 Reject%', type:'line', data:data.reject1, smooth:true, lineStyle:{color:'#4472C4',width:2.5}, symbol:'none', itemStyle:{color:'#4472C4'} },
-      { name:'ACE-2 Reject%', type:'line', data:data.reject2, smooth:true, lineStyle:{color:'#ED7D31',width:2.5}, symbol:'none', itemStyle:{color:'#ED7D31'} },
-      { name:'Target', type:'line', data:data.dates.map(()=>data.target_reject), lineStyle:{color:'#C62828',width:1.5,type:'dashed'}, symbol:'none', itemStyle:{color:'#C62828'} },
-    ],
-    tooltip: { trigger:'axis', formatter: p => p.map(s=>`${s.seriesName}: ${s.value!==null?(s.value*100).toFixed(2)+'%':'—'}`).join('<br>') },
-  });
-
-  // Chart 3: Productivity %
-  initChart('chart-prod', {
-    grid: gridStyle, legend,
-    xAxis: axisStyle,
-    yAxis: { type:'value', min:0.80, max:1.02, axisLabel:{fontSize:10, formatter: v=>(v*100).toFixed(0)+'%'} },
-    series: [
-      { name:'ACE-1 Prod%', type:'bar', data:data.prod1, barWidth:'35%', itemStyle:{color:'#4472C4'}, barGap:'10%' },
-      { name:'ACE-2 Prod%', type:'bar', data:data.prod2, barWidth:'35%', itemStyle:{color:'#ED7D31'} },
-      { name:'Target 97%',  type:'line', data:data.dates.map(()=>data.target_prod),
-        lineStyle:{color:'#C62828',width:1.5,type:'dashed'}, symbol:'none', itemStyle:{color:'#C62828'} },
-    ],
-    tooltip: { trigger:'axis', formatter: p => p.map(s=>`${s.seriesName}: ${s.value!==null?(s.value*100).toFixed(1)+'%':'—'}`).join('<br>') },
-  });
-
-  // Chart 4: Electrical Energy (kWH/hari — bukan /ton karena ton tidak tersedia di daily input)
-  initChart('chart-energy', {
-    grid: gridStyle, legend,
-    xAxis: axisStyle,
-    yAxis: { type:'value', axisLabel:{fontSize:10, formatter: v=>v.toLocaleString()} },
-    series: [
-      { name:'Furnace kWH', type:'line', data:data.energy_furnace,
-        smooth:true, lineStyle:{color:'#7030A0',width:2.5}, symbol:'none', itemStyle:{color:'#7030A0'} },
-      { name:'Non-Furnace kWH', type:'line', data:data.energy_nonfurnace,
-        smooth:true, lineStyle:{color:'#70AD47',width:2.5}, symbol:'none', itemStyle:{color:'#70AD47'} },
-    ],
-    tooltip: { trigger:'axis', formatter: p => p.map(s=>`${s.seriesName}: ${s.value!==null?s.value.toFixed(0)+' kWH':'—'}`).join('<br>') },
-  });
-}
-
-function initChart(id, option) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (charts[id]) charts[id].dispose();
-  charts[id] = echarts.init(el);
-  charts[id].setOption(option);
-}
-
-window.addEventListener('resize', () => Object.values(charts).forEach(c => c.resize()));
-
-// ============================================================
-// HISTORY — Load & Render
-// ============================================================
-let historyData = [];
-
+// ── History ────────────────────────────────────────────────
 async function loadHistory() {
   document.getElementById('hist-loading').classList.remove('hidden');
   document.getElementById('hist-table').classList.add('hidden');
   document.getElementById('history-count').textContent = 'Memuat...';
-
   try {
-    const rows = await getDailyInputs(200);
+    const rows = await getDailyInputs();
     historyData = rows;
     renderHistory(rows);
   } catch(err) {
     document.getElementById('hist-loading').classList.add('hidden');
     document.getElementById('hist-table').classList.remove('hidden');
     document.getElementById('hist-tbody').innerHTML =
-      `<tr><td colspan="8" style="padding:20px;text-align:center;color:#C62828">
-        ⚠️ Gagal memuat riwayat: ${err.message}
-       </td></tr>`;
-    document.getElementById('history-count').textContent = 'Error saat memuat data';
+      `<tr><td colspan="8" style="padding:20px;text-align:center;color:#C62828">⚠️ ${err.message}</td></tr>`;
+    document.getElementById('history-count').textContent = 'Error';
   }
 }
 
 function renderHistory(rows) {
   document.getElementById('hist-loading').classList.add('hidden');
   document.getElementById('hist-table').classList.remove('hidden');
-
-  const sorted = [...rows].sort((a,b) => b.date?.localeCompare?.(a.date) || 0);
-  document.getElementById('history-count').textContent = sorted.length + ' entri ditemukan';
-
+  const sorted = [...rows].sort((a,b) => String(b.date).localeCompare(String(a.date)));
+  document.getElementById('history-count').textContent = sorted.length + ' entri';
   const tbody = document.getElementById('hist-tbody');
-  if (sorted.length === 0) {
+  if (!sorted.length) {
     tbody.innerHTML = '<tr><td colspan="8" style="padding:20px;text-align:center;color:#9ca3af">Belum ada data. Isi form Input Harian untuk mulai.</td></tr>';
     return;
   }
-
   tbody.innerHTML = sorted.map((r, i) => {
-    const rej1 = r.output_ace1_mold > 0 ? ((r.reject_ace1_pcs / r.output_ace1_mold)*100).toFixed(2)+'%' : '—';
-    const rej2 = r.output_ace2_mold > 0 ? ((r.reject_ace2_pcs / r.output_ace2_mold)*100).toFixed(2)+'%' : '—';
-    const safetyBg = parseInt(r.safety_incident) > 0 ? 'background:#FDECEA;color:#C62828;border-radius:4px;padding:1px 6px' : 'color:#1B5E20';
+    const rej1 = (parseFloat(r.output_ace1_mold) > 0) ? ((parseFloat(r.reject_ace1_pcs)/parseFloat(r.output_ace1_mold))*100).toFixed(2)+'%' : '—';
+    const rej2 = (parseFloat(r.output_ace2_mold) > 0) ? ((parseFloat(r.reject_ace2_pcs)/parseFloat(r.output_ace2_mold))*100).toFixed(2)+'%' : '—';
+    const safe = parseInt(r.safety_incident) > 0;
     return `
-      <tr style="border-bottom:1px solid #f3f4f6;${i%2===0?'background:#FAFAFA':''}">
-        <td style="padding:8px 12px;white-space:nowrap">${r.date || '—'}</td>
-        <td style="padding:8px 12px">${r.shift || '—'}</td>
-        <td style="padding:8px 12px;text-align:right;font-family:monospace">${parseFloat(r.ace1_moldh)?.toFixed(1)||'—'}</td>
-        <td style="padding:8px 12px;text-align:right;font-family:monospace">${parseFloat(r.ace2_moldh)?.toFixed(1)||'—'}</td>
-        <td style="padding:8px 12px;text-align:right;font-family:monospace">${rej1}</td>
-        <td style="padding:8px 12px;text-align:right;font-family:monospace">${rej2}</td>
-        <td style="padding:8px 12px;text-align:center"><span style="${safetyBg}">${parseInt(r.safety_incident)>0?'⚠️ Ya':'✓'}</span></td>
-        <td style="padding:8px 12px;color:#6b7280">${r.submitted_by||'—'}</td>
-      </tr>`;
+    <tr style="border-bottom:1px solid #f3f4f6;background:${i%2===0?'#FAFAFA':'white'}">
+      <td style="padding:8px 12px;white-space:nowrap">${r.date||'—'}</td>
+      <td style="padding:8px 12px">${r.shift||'—'}</td>
+      <td style="padding:8px 12px;text-align:right;font-family:monospace">${parseFloat(r.ace1_moldh)?.toFixed(1)||'—'}</td>
+      <td style="padding:8px 12px;text-align:right;font-family:monospace">${parseFloat(r.ace2_moldh)?.toFixed(1)||'—'}</td>
+      <td style="padding:8px 12px;text-align:right;font-family:monospace">${rej1}</td>
+      <td style="padding:8px 12px;text-align:right;font-family:monospace">${rej2}</td>
+      <td style="padding:8px 12px;text-align:center"><span style="${safe?'background:#FDECEA;color:#C62828;border-radius:4px;padding:1px 6px':'color:#1B5E20'}">${safe?'⚠️ Ya':'✓'}</span></td>
+      <td style="padding:8px 12px;color:#6b7280">${r.submitted_by||'—'}</td>
+    </tr>`;
   }).join('');
 }
 
 function downloadCSV() {
-  if (!historyData.length) { showToast('Tidak ada data untuk didownload','error'); return; }
+  if (!historyData.length) { showToast('Tidak ada data','error'); return; }
   const headers = Object.keys(historyData[0]).join(',');
-  const rows = historyData.map(r => Object.values(r).map(v => `"${v}"`).join(','));
-  const csv = [headers, ...rows].join('\n');
+  const csv = [headers, ...historyData.map(r => Object.values(r).map(v=>`"${v}"`).join(','))].join('\n');
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download = `daily_input_${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
   showToast('CSV berhasil didownload','success');
 }
 
-// ============================================================
-// FORM — Input Harian Logic
-// ============================================================
-
-// Set tanggal default ke hari ini
+// ── Form Logic ─────────────────────────────────────────────
 document.getElementById('f-date').valueAsDate = new Date();
 
-// Auto-hitung Prod% dan Reject% saat input berubah
-function calcACE1() {
-  const bdt = parseFloat(document.getElementById('f-ace1-bdt').value)||0;
-  const pw  = parseFloat(document.getElementById('f-ace1-pw').value)||0;
-  const ml  = parseFloat(document.getElementById('f-ace1-mold').value)||0;
-  const ot  = parseFloat(document.getElementById('f-ace1-other').value)||0;
-  const prod = 100 - bdt - pw - ml - ot;
-  document.getElementById('ace1-prod-calc').textContent = prod.toFixed(1) + '%';
-  document.getElementById('ace1-prod-calc').style.color = prod >= 97 ? '#1B5E20' : prod >= 92 ? '#E65100' : '#C62828';
-
-  const reject = parseFloat(document.getElementById('f-ace1-reject').value)||0;
-  const output = parseFloat(document.getElementById('f-ace1-output').value)||0;
-  document.getElementById('f-ace1-reject-pct').value = output > 0 ? ((reject/output)*100).toFixed(2)+'%' : '—';
+function calcLine(prefix) {
+  const g = id => parseFloat(document.getElementById(id).value)||0;
+  const bdt=g(`f-${prefix}-bdt`), pw=g(`f-${prefix}-pw`),
+        ml=g(`f-${prefix}-mold`), ot=g(`f-${prefix}-other`);
+  const prod = 100-bdt-pw-ml-ot;
+  const span = document.getElementById(`${prefix}-prod-calc`);
+  span.textContent = prod.toFixed(1)+'%';
+  span.style.color = prod>=97?'#1B5E20':prod>=92?'#E65100':'#C62828';
+  const rej  = g(`f-${prefix}-reject`), out = g(`f-${prefix}-output`);
+  document.getElementById(`f-${prefix}-reject-pct`).value = out>0?((rej/out)*100).toFixed(2)+'%':'—';
 }
 
-function calcACE2() {
-  const bdt = parseFloat(document.getElementById('f-ace2-bdt').value)||0;
-  const pw  = parseFloat(document.getElementById('f-ace2-pw').value)||0;
-  const ml  = parseFloat(document.getElementById('f-ace2-mold').value)||0;
-  const ot  = parseFloat(document.getElementById('f-ace2-other').value)||0;
-  const prod = 100 - bdt - pw - ml - ot;
-  document.getElementById('ace2-prod-calc').textContent = prod.toFixed(1) + '%';
-  document.getElementById('ace2-prod-calc').style.color = prod >= 97 ? '#1B5E20' : prod >= 92 ? '#E65100' : '#C62828';
+['bdt','pw','mold','other','reject','output'].forEach(s => {
+  document.getElementById(`f-ace1-${s}`).addEventListener('input', ()=>calcLine('ace1'));
+  document.getElementById(`f-ace2-${s}`).addEventListener('input', ()=>calcLine('ace2'));
+});
 
-  const reject = parseFloat(document.getElementById('f-ace2-reject').value)||0;
-  const output = parseFloat(document.getElementById('f-ace2-output').value)||0;
-  document.getElementById('f-ace2-reject-pct').value = output > 0 ? ((reject/output)*100).toFixed(2)+'%' : '—';
+function toggleSafety(show) {
+  document.getElementById('safety-detail').classList.toggle('hidden',!show);
 }
 
-// Pasang listener
-['f-ace1-bdt','f-ace1-pw','f-ace1-mold','f-ace1-other','f-ace1-reject','f-ace1-output']
-  .forEach(id => document.getElementById(id).addEventListener('input', calcACE1));
-['f-ace2-bdt','f-ace2-pw','f-ace2-mold','f-ace2-other','f-ace2-reject','f-ace2-output']
-  .forEach(id => document.getElementById(id).addEventListener('input', calcACE2));
-
-function toggleSafetyDetail(show) {
-  document.getElementById('safety-detail').classList.toggle('hidden', !show);
-}
-
-function val(id) { return document.getElementById(id).value.trim(); }
-function num(id) { return parseFloat(document.getElementById(id).value)||0; }
+const val = id => document.getElementById(id).value.trim();
+const num = id => parseFloat(document.getElementById(id).value)||0;
 
 function previewForm() {
-  const date  = val('f-date');
-  const shift = val('f-shift');
-  if (!date || !shift) { showToast('Isi Tanggal dan Shift dulu','error'); return; }
-
-  const bdt1  = num('f-ace1-bdt'), pw1=num('f-ace1-pw'), ml1=num('f-ace1-mold'), ot1=num('f-ace1-other');
-  const prod1 = (100 - bdt1 - pw1 - ml1 - ot1).toFixed(1);
-  const bdt2  = num('f-ace2-bdt'), pw2=num('f-ace2-pw'), ml2=num('f-ace2-mold'), ot2=num('f-ace2-other');
-  const prod2 = (100 - bdt2 - pw2 - ml2 - ot2).toFixed(1);
-
-  const preview = document.getElementById('form-preview');
-  preview.innerHTML = `
+  if (!val('f-date')||!val('f-shift')) { showToast('Isi Tanggal & Shift dulu','error'); return; }
+  const b1=num('f-ace1-bdt'),p1=num('f-ace1-pw'),m1=num('f-ace1-mold'),o1=num('f-ace1-other');
+  const b2=num('f-ace2-bdt'),p2=num('f-ace2-pw'),m2=num('f-ace2-mold'),o2=num('f-ace2-other');
+  const safe = document.querySelector('input[name=safety]:checked').value==='1';
+  const prev = document.getElementById('form-preview');
+  prev.innerHTML = `
     <strong>Preview Submission:</strong><br>
-    📅 ${date} | ${shift} | ${val('f-operator')||'(operator tidak diisi)'}<br>
-    🔵 ACE-1: ${num('f-ace1-moldh')} Mold/H | Prod: ${prod1}% | Reject: ${num('f-ace1-reject')} pcs<br>
-    🟠 ACE-2: ${num('f-ace2-moldh')} Mold/H | Prod: ${prod2}% | Reject: ${num('f-ace2-reject')} pcs<br>
+    📅 ${val('f-date')} | ${val('f-shift')} | ${val('f-operator')||'(tanpa nama)'}<br>
+    🔵 ACE-1: ${num('f-ace1-moldh')} Mold/H | Prod: ${(100-b1-p1-m1-o1).toFixed(1)}% | Reject: ${num('f-ace1-reject')} pcs<br>
+    🟠 ACE-2: ${num('f-ace2-moldh')} Mold/H | Prod: ${(100-b2-p2-m2-o2).toFixed(1)}% | Reject: ${num('f-ace2-reject')} pcs<br>
     🟢 Finishing: ${num('f-finishing')}% | Core: ${num('f-core')}%<br>
     ⚡ Furnace: ${num('f-furnace')} kWH | Non-Furn: ${num('f-nonfurnace')} kWH<br>
-    🛡️ Safety: ${document.querySelector('input[name=safety]:checked').value === '1' ? '⚠️ ADA INSIDEN' : '✓ Aman'}
-  `;
-  preview.classList.remove('hidden');
-  preview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    🛡️ Safety: ${safe?'⚠️ ADA INSIDEN':'✓ Aman'}`;
+  prev.classList.remove('hidden');
+  prev.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 async function handleSubmit(e) {
   e.preventDefault();
   const errEl = document.getElementById('form-error-msg');
   errEl.classList.add('hidden');
-
-  // Validasi wajib
-  if (!val('f-date')) { showToast('Tanggal wajib diisi','error'); return; }
+  if (!val('f-date'))  { showToast('Tanggal wajib diisi','error'); return; }
   if (!val('f-shift')) { showToast('Shift wajib dipilih','error'); return; }
-
   const btn = document.getElementById('submit-btn');
-  btn.disabled = true;
-  btn.textContent = '⏳ Mengirim data...';
-
-  const bdt1=num('f-ace1-bdt'),pw1=num('f-ace1-pw'),ml1=num('f-ace1-mold'),ot1=num('f-ace1-other');
-  const bdt2=num('f-ace2-bdt'),pw2=num('f-ace2-pw'),ml2=num('f-ace2-mold'),ot2=num('f-ace2-other');
-  const hasSafety = document.querySelector('input[name=safety]:checked').value === '1';
-
-  const payload = {
-    date: val('f-date'), shift: val('f-shift'), submitted_by: val('f-operator'),
-    ace1_moldh: num('f-ace1-moldh'), ace1_prod_pct: (100-bdt1-pw1-ml1-ot1)/100,
-    ace1_bdt_loss: bdt1/100, ace1_pw_loss: pw1/100, ace1_mold_loss: ml1/100, ace1_other_loss: ot1/100,
-    ace2_moldh: num('f-ace2-moldh'), ace2_prod_pct: (100-bdt2-pw2-ml2-ot2)/100,
-    ace2_bdt_loss: bdt2/100, ace2_pw_loss: pw2/100, ace2_mold_loss: ml2/100, ace2_other_loss: ot2/100,
-    reject_ace1_pcs: num('f-ace1-reject'), reject_ace2_pcs: num('f-ace2-reject'),
-    output_ace1_mold: num('f-ace1-output'), output_ace2_mold: num('f-ace2-output'),
-    finishing_prod_pct: num('f-finishing')/100, core_prod_pct: num('f-core')/100,
-    safety_incident: hasSafety ? 1 : 0,
-    safety_type: hasSafety ? val('f-safety-type') : '',
-    safety_desc: hasSafety ? val('f-safety-desc') : '',
-    elec_furnace_kwh: num('f-furnace'), elec_nonfurnace_kwh: num('f-nonfurnace'),
-    notes: val('f-notes'),
-  };
-
+  btn.disabled=true; btn.textContent='⏳ Mengirim...';
+  const b1=num('f-ace1-bdt'),p1=num('f-ace1-pw'),m1=num('f-ace1-mold'),o1=num('f-ace1-other');
+  const b2=num('f-ace2-bdt'),p2=num('f-ace2-pw'),m2=num('f-ace2-mold'),o2=num('f-ace2-other');
+  const hasSafe = document.querySelector('input[name=safety]:checked').value==='1';
   try {
-    const result = await submitData('DAILY_INPUT', payload);
-    showToast('✓ Data berhasil disimpan! ID: ' + result.id, 'success', 5000);
+    const result = await submitData('DAILY_INPUT', {
+      date:val('f-date'), shift:val('f-shift'), submitted_by:val('f-operator'),
+      ace1_moldh:num('f-ace1-moldh'), ace1_prod_pct:(100-b1-p1-m1-o1)/100,
+      ace1_bdt_loss:b1/100, ace1_pw_loss:p1/100, ace1_mold_loss:m1/100, ace1_other_loss:o1/100,
+      ace2_moldh:num('f-ace2-moldh'), ace2_prod_pct:(100-b2-p2-m2-o2)/100,
+      ace2_bdt_loss:b2/100, ace2_pw_loss:p2/100, ace2_mold_loss:m2/100, ace2_other_loss:o2/100,
+      reject_ace1_pcs:num('f-ace1-reject'), reject_ace2_pcs:num('f-ace2-reject'),
+      output_ace1_mold:num('f-ace1-output'), output_ace2_mold:num('f-ace2-output'),
+      finishing_prod_pct:num('f-finishing')/100, core_prod_pct:num('f-core')/100,
+      safety_incident:hasSafe?1:0, safety_type:hasSafe?val('f-safety-type'):'', safety_desc:hasSafe?val('f-safety-desc'):'',
+      elec_furnace_kwh:num('f-furnace'), elec_nonfurnace_kwh:num('f-nonfurnace'),
+      notes:val('f-notes'),
+    });
+    showToast('✓ Data tersimpan! ID: '+result.id,'success',5000);
     document.getElementById('daily-form').reset();
     document.getElementById('f-date').valueAsDate = new Date();
     document.getElementById('form-preview').classList.add('hidden');
-    document.getElementById('ace1-prod-calc').textContent = '—';
-    document.getElementById('ace2-prod-calc').textContent = '—';
-    // Reset dashboard agar refresh data
-    dashData = null;
+    document.getElementById('ace1-prod-calc').textContent='—';
+    document.getElementById('ace2-prod-calc').textContent='—';
+    _dailyRows = null;
   } catch(err) {
-    errEl.textContent = '❌ Gagal submit: ' + err.message;
-    errEl.classList.remove('hidden');
-    showToast('Gagal menyimpan data', 'error');
+    errEl.textContent = '❌ '+err.message; errEl.classList.remove('hidden');
+    showToast('Gagal menyimpan','error');
   } finally {
-    btn.disabled = false;
-    btn.textContent = '✓ Submit Data';
+    btn.disabled=false; btn.textContent='✓ Submit Data';
   }
 }
 
-// ============================================================
-// MANUAL REFRESH
-// ============================================================
+// ── Manual Refresh ─────────────────────────────────────────
 async function manualRefresh() {
   const icon = document.getElementById('refresh-icon');
-  icon.style.animation = 'spin 0.8s linear infinite';
-  clearCache();
-  dashData = null;
-  if (currentView === 'dashboard') await loadDashboard();
-  if (currentView === 'history') await loadHistory();
-  icon.style.animation = '';
+  icon.style.animation='spin 0.8s linear infinite';
+  clearCache(); _dailyRows=null; _monthlyRows=null; _rejRows=null;
+  if (currentView==='dashboard') await loadDashboard();
+  if (currentView==='history')   await loadHistory();
+  setTimeout(()=>{ icon.style.animation=''; }, 500);
 }
 
-// ── Init ──
-document.getElementById('company-name').textContent = CONFIG.COMPANY_NAME + ' KPI';
+// ── Init ───────────────────────────────────────────────────
+document.getElementById('header-company').textContent = CONFIG.COMPANY_NAME + ' — KPI';
 loadDashboard();
-
-// Auto-refresh
 if (CONFIG.AUTO_REFRESH_MINUTES > 0) {
   setInterval(manualRefresh, CONFIG.AUTO_REFRESH_MINUTES * 60 * 1000);
 }
-
 </script>
 </body>
 </html>
