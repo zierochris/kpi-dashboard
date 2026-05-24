@@ -564,28 +564,32 @@ function renderCharts(data) {
     tooltip: { trigger:'axis', formatter: p => p.map(s=>`${s.seriesName}: ${s.value!==null?(s.value*100).toFixed(2)+'%':'—'}`).join('<br>') },
   });
 
-  // Chart 3: Productivity (reuse reject data slot for prod)
+  // Chart 3: Productivity %
   initChart('chart-prod', {
     grid: gridStyle, legend,
     xAxis: axisStyle,
-    yAxis: { type:'value', min:0.8, max:1, axisLabel:{fontSize:10, formatter: v=>(v*100).toFixed(0)+'%'} },
+    yAxis: { type:'value', min:0.80, max:1.02, axisLabel:{fontSize:10, formatter: v=>(v*100).toFixed(0)+'%'} },
     series: [
-      { name:'ACE-1 Prod%', type:'bar', data: data.dates.map((_,i)=>null), barWidth:'40%', itemStyle:{color:'#4472C4'} },
-      { name:'ACE-2 Prod%', type:'bar', data: data.dates.map((_,i)=>null), barWidth:'40%', itemStyle:{color:'#ED7D31'} },
+      { name:'ACE-1 Prod%', type:'bar', data:data.prod1, barWidth:'35%', itemStyle:{color:'#4472C4'}, barGap:'10%' },
+      { name:'ACE-2 Prod%', type:'bar', data:data.prod2, barWidth:'35%', itemStyle:{color:'#ED7D31'} },
+      { name:'Target 97%',  type:'line', data:data.dates.map(()=>data.target_prod),
+        lineStyle:{color:'#C62828',width:1.5,type:'dashed'}, symbol:'none', itemStyle:{color:'#C62828'} },
     ],
-    tooltip: { trigger:'axis' },
+    tooltip: { trigger:'axis', formatter: p => p.map(s=>`${s.seriesName}: ${s.value!==null?(s.value*100).toFixed(1)+'%':'—'}`).join('<br>') },
   });
 
-  // Chart 4: Energy (placeholder data)
+  // Chart 4: Electrical Energy (kWH/hari — bukan /ton karena ton tidak tersedia di daily input)
   initChart('chart-energy', {
     grid: gridStyle, legend,
     xAxis: axisStyle,
-    yAxis: { type:'value', axisLabel:{fontSize:10} },
+    yAxis: { type:'value', axisLabel:{fontSize:10, formatter: v=>v.toLocaleString()} },
     series: [
-      { name:'Furnace kWH', type:'line', data:data.dates.map(()=>null), smooth:true, lineStyle:{color:'#7030A0',width:2.5}, symbol:'none', itemStyle:{color:'#7030A0'} },
-      { name:'Non-Furnace', type:'line', data:data.dates.map(()=>null), smooth:true, lineStyle:{color:'#70AD47',width:2.5}, symbol:'none', itemStyle:{color:'#70AD47'} },
+      { name:'Furnace kWH', type:'line', data:data.energy_furnace,
+        smooth:true, lineStyle:{color:'#7030A0',width:2.5}, symbol:'none', itemStyle:{color:'#7030A0'} },
+      { name:'Non-Furnace kWH', type:'line', data:data.energy_nonfurnace,
+        smooth:true, lineStyle:{color:'#70AD47',width:2.5}, symbol:'none', itemStyle:{color:'#70AD47'} },
     ],
-    tooltip: { trigger:'axis' },
+    tooltip: { trigger:'axis', formatter: p => p.map(s=>`${s.seriesName}: ${s.value!==null?s.value.toFixed(0)+' kWH':'—'}`).join('<br>') },
   });
 }
 
@@ -615,7 +619,12 @@ async function loadHistory() {
     renderHistory(rows);
   } catch(err) {
     document.getElementById('hist-loading').classList.add('hidden');
-    document.getElementById('history-count').textContent = 'Gagal memuat: ' + err.message;
+    document.getElementById('hist-table').classList.remove('hidden');
+    document.getElementById('hist-tbody').innerHTML =
+      `<tr><td colspan="8" style="padding:20px;text-align:center;color:#C62828">
+        ⚠️ Gagal memuat riwayat: ${err.message}
+       </td></tr>`;
+    document.getElementById('history-count').textContent = 'Error saat memuat data';
   }
 }
 

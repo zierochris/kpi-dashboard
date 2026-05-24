@@ -148,21 +148,48 @@ function buildScorecard(aggregated) {
 
 // Data untuk chart trend (per hari dalam periode)
 function buildTrendData(rows, limit = 30) {
-  if (!rows || rows.length === 0) return { dates: [], ace1: [], ace2: [], reject1: [], reject2: [], target_moldh: 148.5, target_reject: 0.019 };
+  if (!rows || rows.length === 0) return {
+    dates:[], ace1:[], ace2:[], prod1:[], prod2:[],
+    reject1:[], reject2:[], energy_furnace:[], energy_nonfurnace:[],
+    target_moldh:148.5, target_reject:0.019, target_prod:0.97,
+    target_furnace:550, target_nonfurnace:200
+  };
 
-  // Ambil N hari terakhir, urutkan ascending
+  // Ambil N hari terakhir (filter baris yang punya data mold/h), urutkan ascending
   const sorted = [...rows]
     .filter(r => r.date && parseFloat(r.ace1_moldh) > 0)
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))
     .slice(-limit);
 
+  // Reject rate per hari: pcs / output (lebih akurat dari pct langsung)
+  const rejectRate = (rejectPcs, outputMold) => {
+    const pcs = parseFloat(rejectPcs);
+    const out = parseFloat(outputMold);
+    return (out > 0 && !isNaN(pcs)) ? pcs / out : null;
+  };
+
+  // Label tanggal ringkas untuk chart (hapus tahun)
+  const dateLabel = d => String(d).replace(/^\d{4}-/, '').replace(/-/, '/');
+
   return {
-    dates:          sorted.map(r => r.date),
-    ace1:           sorted.map(r => parseFloat(r.ace1_moldh) || null),
-    ace2:           sorted.map(r => parseFloat(r.ace2_moldh) || null),
-    reject1:        sorted.map(r => parseFloat(r.ace1_prod_pct) ? (parseFloat(r.reject_ace1_pcs) / (parseFloat(r.output_ace1_mold) || 1)) : null),
-    reject2:        sorted.map(r => parseFloat(r.ace2_prod_pct) ? (parseFloat(r.reject_ace2_pcs) / (parseFloat(r.output_ace2_mold) || 1)) : null),
-    target_moldh:   148.5,
-    target_reject:  0.019,
+    dates:            sorted.map(r => dateLabel(r.date)),
+    // Mold/H
+    ace1:             sorted.map(r => parseFloat(r.ace1_moldh) || null),
+    ace2:             sorted.map(r => parseFloat(r.ace2_moldh) || null),
+    // Productivity % (0-1)
+    prod1:            sorted.map(r => parseFloat(r.ace1_prod_pct) || null),
+    prod2:            sorted.map(r => parseFloat(r.ace2_prod_pct) || null),
+    // Rejection rate (0-1)
+    reject1:          sorted.map(r => rejectRate(r.reject_ace1_pcs, r.output_ace1_mold)),
+    reject2:          sorted.map(r => rejectRate(r.reject_ace2_pcs, r.output_ace2_mold)),
+    // Energi — kWH total per hari (bukan /ton karena ton tidak ada di daily input)
+    energy_furnace:   sorted.map(r => parseFloat(r.elec_furnace_kwh)    || null),
+    energy_nonfurnace:sorted.map(r => parseFloat(r.elec_nonfurnace_kwh) || null),
+    // Target lines (dari config)
+    target_moldh:     148.5,
+    target_reject:    0.019,
+    target_prod:      0.97,
+    target_furnace:   550,   // kWH/Ton — dipakai sebagai referensi visual
+    target_nonfurnace:200,
   };
 }

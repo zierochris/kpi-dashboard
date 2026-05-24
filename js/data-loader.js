@@ -58,7 +58,8 @@ async function fetchSheet(sheetName, limit = 500) {
     return [];
   }
 
-  const url = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&tq=limit%20${limit}`;
+  // URL tanpa TQL query — lebih reliable, limit diterapkan di client
+  const url = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
 
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`Gagal fetch ${sheetName}: HTTP ${resp.status}`);

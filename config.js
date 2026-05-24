@@ -8,7 +8,7 @@ const CONFIG = {
   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwrALaM9xueGEDDvqmrOpGFyVFc2KbJT8aLkSKtOFcCzIndl0IvCnlBgS4EKI0ElKlIgg/exec',
 
   // ⚠️ WAJIB DIISI — Sheet ID dari URL Google Sheets
-  SHEET_ID: '1ENag8XOGKy8eWNtjaUMENZiqAFGy-INc9-D-fk2yg6A',
+  SHEET_ID: 'P1ENag8XOGKy8eWNtjaUMENZiqAFGy-INc9-D-fk2yg6A',
 
   // Kode rahasia yang sama dengan tab CONFIG di Sheets
   OPERATOR_SECRET: 'FOUNDRY2026',
