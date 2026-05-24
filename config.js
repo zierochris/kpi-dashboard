@@ -5,7 +5,7 @@
 
 const CONFIG = {
   // ⚠️ WAJIB DIISI — Web App URL dari Apps Script (Step B)
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwrALaM9xueGEDDvqmrOpGFyVFc2KbJT8aLkSKtOFcCzIndl0IvCnlBgS4EKI0ElKlIgg/exec',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwSR0CbUAtWrTZPo-QZK9tgqZVcPUTNec-HLGeHyXzIliv43thm5jsGRr-28hghWygytQ/exec',
 
   // ⚠️ WAJIB DIISI — Sheet ID dari URL Google Sheets
   SHEET_ID: '1ENag8XOGKy8eWNtjaUMENZiqAFGy-INc9-D-fk2yg6A',
