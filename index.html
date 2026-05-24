@@ -92,6 +92,10 @@
   <!-- Dashboard content (tersembunyi saat loading) -->
   <div id="dash-content" class="hidden">
 
+    <!-- Empty state banner -->
+    <div id="dash-empty-banner" style="display:none;background:#FFF8E1;border-radius:8px;padding:10px 14px;font-size:12px;color:#E65100;margin-bottom:12px;border-left:3px solid #E65100">
+    </div>
+
     <!-- KPI Scorecard -->
     <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">
       KPI Scorecard
@@ -486,30 +490,40 @@ function renderDashboard(rows) {
   document.getElementById('dash-content').classList.remove('hidden');
 
   const agg = aggregateDaily(rows, currentPeriod);
-  const scorecard = buildScorecard(agg);
 
-  // Render scorecard
+  // Tampilkan info jika tidak ada data untuk periode ini
+  const emptyBanner = document.getElementById('dash-empty-banner');
+  if (!agg && rows.length > 0) {
+    emptyBanner.textContent = `Tidak ada data untuk periode "${currentPeriod === 'today' ? 'Hari Ini' : currentPeriod === 'week' ? '7 Hari' : currentPeriod === 'month' ? 'Bulan Ini' : 'YTD'}". Scorecard menampilkan "No Data".`;
+    emptyBanner.style.display = 'block';
+  } else if (rows.length === 0) {
+    emptyBanner.textContent = 'Belum ada data di Google Sheets. Isi form Input Harian untuk mulai.';
+    emptyBanner.style.display = 'block';
+  } else {
+    emptyBanner.style.display = 'none';
+  }
+
+  const scorecard = buildScorecard(agg);
   renderScorecard(scorecard);
 
-  // Render charts
   const trend = buildTrendData(rows, 30);
   renderCharts(trend);
-
-  // Render alerts
   renderAlerts(scorecard);
 }
 
 function renderScorecard(cards) {
   const grid = document.getElementById('kpi-grid');
-  grid.innerHTML = cards.map(kpi => `
+  grid.innerHTML = cards.map(kpi => {
+    const style = kpi.style || RAG_STYLE['nodata']; // safeguard
+    return `
     <div class="kpi-card">
       <div class="kpi-cat">${kpi.cat}</div>
       <div class="kpi-name">${kpi.label}</div>
       <div class="kpi-val val-${kpi.rag}">${kpi.fmtActual}</div>
       <div class="kpi-tgt">Target: ${kpi.fmtTarget} ${kpi.unit}</div>
-      <span class="kpi-badge rag-${kpi.rag}">${kpi.style.icon} ${kpi.style.label}</span>
-    </div>
-  `).join('');
+      <span class="kpi-badge rag-${kpi.rag}">${style.icon} ${style.label}</span>
+    </div>`;
+  }).join('');
 }
 
 function renderAlerts(cards) {

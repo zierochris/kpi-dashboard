@@ -109,7 +109,14 @@ function aggregateDaily(rows, period) {
 // Bangun array scorecard siap render
 function buildScorecard(aggregated) {
   if (!aggregated) return KPI_DEFS.map(kpi => ({
-    ...kpi, actual: null, rag: 'nodata', fmtActual: '—', fmtTarget: fmt(kpi.target, kpi.fmt), gap: null, gapPct: null,
+    ...kpi,
+    actual:     null,
+    rag:        'nodata',
+    fmtActual:  '—',
+    fmtTarget:  fmt(kpi.target, kpi.fmt),
+    gap:        null,
+    gapPct:     null,
+    style:      RAG_STYLE['nodata'],   // ← FIX: was missing, caused crash
   }));
 
   // Map id ke actual value
