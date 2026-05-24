@@ -117,6 +117,18 @@
       </div>
     </div>
     <div id="completeness-badge" style="display:none;margin-left:auto;font-size:11px;padding:3px 10px;border-radius:20px;background:#E6F1FB;color:#0C447C;white-space:nowrap;flex-shrink:0"></div>
+    <!-- Compare toggle — Phase 6.2 -->
+    <button id="btn-compare" onclick="toggleCompare()"
+      title="Bandingkan dengan periode sebelumnya"
+      style="margin-left:4px;padding:5px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1.5px solid #e5e7eb;background:white;color:#6b7280;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;transition:all .15s">
+      ⇄ Bandingkan
+    </button>
+  </div>
+  <!-- Compare badge — tampil saat mode aktif -->
+  <div id="compare-badge" style="display:none;font-size:11px;color:#185FA5;margin-bottom:8px;padding:4px 12px;background:#E6F1FB;border-radius:6px;display:flex;align-items:center;gap:6px">
+    <span>⇄ Membandingkan dengan:</span>
+    <strong id="compare-badge-label"></strong>
+    <span style="margin-left:auto;cursor:pointer;color:#185FA5;opacity:.7" onclick="toggleCompare()">✕ Matikan</span>
   </div>
 
   <!-- Custom Date Modal -->
@@ -387,8 +399,12 @@
 // ── State ─────────────────────────────────────────────────
 let currentView    = 'dashboard';
 let currentPeriod  = 'today';
-let customDateFrom = null;  // untuk period 'custom'
+let customDateFrom = null;
 let customDateTo   = null;
+let compareMode    = false;   // Phase 6.2 — comparison toggle
+let _prevAggData   = null;    // aggregated data for previous period
+let _prevRows      = null;    // raw rows sliced for prev period
+let _deltaMap      = {};      // {kpi_id: {delta, deltaPct, direction, isImprovement}}
 let _dailyRows     = null;
 let _monthlyRows   = null;
 let _rejRows       = null;
@@ -479,7 +495,27 @@ function setPeriodExtra(period, btn) {
   if (_dailyRows !== null) renderDashboard();
 }
 
-// ── Custom Date Range ──────────────────────────────────────
+// ── Compare Mode — Phase 6.2 ───────────────────────────────
+function toggleCompare() {
+  compareMode = !compareMode;
+  const btn   = document.getElementById('btn-compare');
+  if (compareMode) {
+    btn.style.background    = '#1B2A4A';
+    btn.style.color         = 'white';
+    btn.style.borderColor   = '#1B2A4A';
+  } else {
+    btn.style.background    = 'white';
+    btn.style.color         = '#6b7280';
+    btn.style.borderColor   = '#e5e7eb';
+    _prevAggData = null;
+    _prevRows    = null;
+    _deltaMap    = {};
+    document.getElementById('compare-badge').style.display = 'none';
+  }
+  if (_dailyRows !== null) renderDashboard();
+}
+
+
 function openCustomModal() {
   const modal = document.getElementById('custom-modal');
   modal.style.display = 'flex';
@@ -562,9 +598,31 @@ function renderDashboard() {
   document.getElementById('dash-content').classList.remove('hidden');
   const rows = _dailyRows || [];
 
-  // Pass custom range jika period === 'custom'
   let agg = aggregateDaily(rows, currentPeriod, customDateFrom, customDateTo);
   agg = injectMonthlyData(agg, _monthlyRows || [], currentPeriod);
+
+  // ── Phase 6.2: Comparison mode ──
+  _deltaMap = {};
+  const compareBadge = document.getElementById('compare-badge');
+  if (compareMode) {
+    const prevBounds = getPreviousPeriodBounds(currentPeriod, customDateFrom, customDateTo);
+    if (prevBounds) {
+      _prevAggData = aggregateDaily(rows, 'custom', prevBounds.start, prevBounds.end);
+      _prevAggData = injectMonthlyData(_prevAggData, _monthlyRows || [], 'custom');
+      _deltaMap    = calcDelta(agg, _prevAggData);
+      // Update compare badge
+      document.getElementById('compare-badge-label').textContent = prevBounds.label;
+      compareBadge.style.display = 'flex';
+      // Raw rows for prev period (for chart overlay)
+      _prevRows = rows.filter(r => r.date >= prevBounds.start && r.date <= prevBounds.end);
+    } else {
+      compareBadge.style.display = 'none';
+      _prevRows = null;
+    }
+  } else {
+    compareBadge.style.display = 'none';
+    _prevRows = null;
+  }
 
   // Empty banner
   const banner    = document.getElementById('dash-empty-banner');
@@ -577,7 +635,6 @@ function renderDashboard() {
     banner.style.display = 'block';
   } else { banner.style.display = 'none'; }
 
-  // Completeness badge — tampilkan period label yang benar
   const comp  = calcCompleteness(rows, currentPeriod, customDateFrom, customDateTo);
   const badge = document.getElementById('completeness-badge');
   if (comp.filled > 0) {
@@ -589,9 +646,12 @@ function renderDashboard() {
   } else { badge.style.display = 'none'; }
 
   const cards = buildScorecard(agg);
-  renderScorecard(cards);
+  renderScorecard(cards, _deltaMap);
   buildPrintTable(cards);
-  renderAllCharts(buildTrendData(rows, 30), buildRejectPareto(_rejRows || []));
+  // Pass prev trend data to charts for overlay
+  const trend     = buildTrendData(rows, 30);
+  const prevTrend = _prevRows ? buildTrendData(_prevRows, 30) : null;
+  renderAllCharts(trend, buildRejectPareto(_rejRows || []), prevTrend);
   renderAlerts(cards);
 
   const pt = document.getElementById('pareto-total');
@@ -599,13 +659,30 @@ function renderDashboard() {
   pt.textContent = p.total > 0 ? `— Total: ${p.total.toLocaleString()} pcs` : '';
 }
 
-function renderScorecard(cards) {
+function renderScorecard(cards, deltaMap) {
+  const dm = deltaMap || {};
   document.getElementById('kpi-grid').innerHTML = cards.map(kpi => {
     const style = kpi.style || RAG_STYLE['nodata'];
+    const d     = dm[kpi.id];
+    let deltaHtml = '';
+
+    if (compareMode && d && d.delta !== null) {
+      const sign  = d.delta > 0 ? '+' : '';
+      const arrow = d.direction === 'up' ? '▲' : d.direction === 'down' ? '▼' : '—';
+      const color = d.isImprovement === null ? '#9ca3af'
+                  : d.isImprovement ? '#1B5E20' : '#C62828';
+      const fmtD  = fmt(Math.abs(d.delta), kpi.fmt);
+      const pct   = d.deltaPct !== null ? ` (${sign}${(d.deltaPct*100).toFixed(1)}%)` : '';
+      deltaHtml = `<div style="font-size:10px;color:${color};margin-top:2px;line-height:1.3">${arrow} ${sign}${fmtD}${pct}</div>`;
+    } else if (compareMode) {
+      deltaHtml = `<div style="font-size:10px;color:#d1d5db;margin-top:2px">— no prev data</div>`;
+    }
+
     return `<div class="kpi-card">
       <div class="kpi-cat">${kpi.cat}</div>
       <div class="kpi-name">${kpi.label}</div>
       <div class="kpi-val val-${kpi.rag}">${kpi.fmtActual}</div>
+      ${deltaHtml}
       <div class="kpi-tgt">Target: ${kpi.fmtTarget} ${kpi.unit}</div>
       <span class="kpi-badge rag-${kpi.rag}">${style.icon} ${style.label}</span>
     </div>`;

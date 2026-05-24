@@ -40,65 +40,83 @@ function emptyChart(id, msg = 'Belum ada data untuk periode ini') {
 }
 
 // ── Chart 1: Mold/H Trend ───────────────────────────────────
-function renderMoldhChart(data) {
+function renderMoldhChart(data, prev) {
   if (!data.dates || data.dates.length === 0) { emptyChart('chart-moldh'); return; }
+  const hp = prev && prev.dates && prev.dates.length > 0;
+  const series = [
+    { name: hp?'ACE-1 (saat ini)':'ACE-1', type:'line', data:data.ace1, smooth:true,
+      lineStyle:{color:C.ace1,width:2.5}, itemStyle:{color:C.ace1}, symbol:'circle', symbolSize:4 },
+    { name: hp?'ACE-2 (saat ini)':'ACE-2', type:'line', data:data.ace2, smooth:true,
+      lineStyle:{color:C.ace2,width:2.5}, itemStyle:{color:C.ace2}, symbol:'circle', symbolSize:4 },
+    { name:'Target', type:'line', data:data.dates.map(()=>data.target_moldh),
+      lineStyle:LINE_TARGET, symbol:'none', itemStyle:{color:C.target} },
+  ];
+  if (hp) {
+    series.push({ name:'ACE-1 (prev)', type:'line', data:prev.ace1, smooth:true,
+      lineStyle:{color:C.ace1,width:1.5,type:'dashed'}, opacity:0.55, symbol:'none', itemStyle:{color:C.ace1,opacity:0.55} });
+    series.push({ name:'ACE-2 (prev)', type:'line', data:prev.ace2, smooth:true,
+      lineStyle:{color:C.ace2,width:1.5,type:'dashed'}, opacity:0.55, symbol:'none', itemStyle:{color:C.ace2,opacity:0.55} });
+  }
   initChart('chart-moldh', {
-    grid: GRID, legend: LEGEND, tooltip: {
-      ...TOOLTIP_AXIS,
-      formatter: p => p.map(s => `${s.marker}${s.seriesName}: <b>${s.value !== null ? s.value.toFixed(1) : '—'}</b>`).join('<br>')
-    },
-    xAxis: { type:'category', data:data.dates, axisLabel:{ ...AXIS_LBL, rotate: data.dates.length > 14 ? 30 : 0 } },
-    yAxis: { type:'value', min:_cc.moldh_min||110, max:_cc.moldh_max||165, axisLabel:{ ...AXIS_LBL, formatter:'{value}' } },
-    series: [
-      { name:'ACE-1', type:'line', data:data.ace1, smooth:true,
-        lineStyle:{color:C.ace1, width:2.5}, itemStyle:{color:C.ace1}, symbol:'circle', symbolSize:4 },
-      { name:'ACE-2', type:'line', data:data.ace2, smooth:true,
-        lineStyle:{color:C.ace2, width:2.5}, itemStyle:{color:C.ace2}, symbol:'circle', symbolSize:4 },
-      { name:'Target 148.5', type:'line', data:data.dates.map(()=>data.target_moldh),
-        lineStyle:LINE_TARGET, symbol:'none', itemStyle:{color:C.target} },
-    ],
+    grid:GRID, legend:LEGEND,
+    tooltip:{...TOOLTIP_AXIS, formatter:p=>p.map(s=>`${s.marker}${s.seriesName}: <b>${s.value!==null?s.value.toFixed(1):'—'}</b>`).join('<br>')},
+    xAxis:{type:'category',data:data.dates,axisLabel:{...AXIS_LBL,rotate:data.dates.length>14?30:0}},
+    yAxis:{type:'value',min:_cc.moldh_min||110,max:_cc.moldh_max||165,axisLabel:{...AXIS_LBL,formatter:'{value}'}},
+    series,
   });
 }
 
 // ── Chart 2: Rejection Rate Trend ───────────────────────────
-function renderRejectChart(data) {
+function renderRejectChart(data, prev) {
   if (!data.dates || data.dates.length === 0) { emptyChart('chart-reject'); return; }
+  const hp = prev && prev.dates && prev.dates.length > 0;
+  const series = [
+    { name: hp ? 'ACE-1 (saat ini)' : 'ACE-1 Reject%', type:'line', data:data.reject1, smooth:true,
+      lineStyle:{color:C.ace1,width:2.5}, itemStyle:{color:C.ace1}, symbol:'circle', symbolSize:4 },
+    { name: hp ? 'ACE-2 (saat ini)' : 'ACE-2 Reject%', type:'line', data:data.reject2, smooth:true,
+      lineStyle:{color:C.ace2,width:2.5}, itemStyle:{color:C.ace2}, symbol:'circle', symbolSize:4 },
+    { name:'Target', type:'line', data:data.dates.map(()=>data.target_reject),
+      lineStyle:LINE_TARGET, symbol:'none', itemStyle:{color:C.target} },
+  ];
+  if (hp) {
+    series.push({ name:'ACE-1 Reject (prev)', type:'line', data:prev.reject1, smooth:true,
+      lineStyle:{color:C.ace1,width:1.5,type:'dashed'}, symbol:'none', itemStyle:{color:C.ace1,opacity:0.55} });
+    series.push({ name:'ACE-2 Reject (prev)', type:'line', data:prev.reject2, smooth:true,
+      lineStyle:{color:C.ace2,width:1.5,type:'dashed'}, symbol:'none', itemStyle:{color:C.ace2,opacity:0.55} });
+  }
   initChart('chart-reject', {
-    grid: GRID, legend: LEGEND, tooltip: {
-      ...TOOLTIP_AXIS,
-      formatter: p => p.map(s => `${s.marker}${s.seriesName}: <b>${s.value !== null ? (s.value*100).toFixed(2)+'%' : '—'}</b>`).join('<br>')
-    },
-    xAxis: { type:'category', data:data.dates, axisLabel:{ ...AXIS_LBL, rotate: data.dates.length > 14 ? 30 : 0 } },
-    yAxis: { type:'value', min:0, axisLabel:{ ...AXIS_LBL, formatter: v=>(v*100).toFixed(1)+'%' } },
-    series: [
-      { name:'ACE-1 Reject%', type:'line', data:data.reject1, smooth:true,
-        lineStyle:{color:C.ace1, width:2.5}, itemStyle:{color:C.ace1}, symbol:'circle', symbolSize:4 },
-      { name:'ACE-2 Reject%', type:'line', data:data.reject2, smooth:true,
-        lineStyle:{color:C.ace2, width:2.5}, itemStyle:{color:C.ace2}, symbol:'circle', symbolSize:4 },
-      { name:'Target 1.9%', type:'line', data:data.dates.map(()=>data.target_reject),
-        lineStyle:LINE_TARGET, symbol:'none', itemStyle:{color:C.target} },
-    ],
+    grid:GRID, legend:LEGEND,
+    tooltip:{...TOOLTIP_AXIS, formatter:p=>p.map(s=>`${s.marker}${s.seriesName}: <b>${s.value!==null?(s.value*100).toFixed(2)+'%':'—'}</b>`).join('<br>')},
+    xAxis:{type:'category',data:data.dates,axisLabel:{...AXIS_LBL,rotate:data.dates.length>14?30:0}},
+    yAxis:{type:'value',min:0,axisLabel:{...AXIS_LBL,formatter:v=>(v*100).toFixed(1)+'%'}},
+    series,
   });
 }
 
 // ── Chart 3: Productivity % ─────────────────────────────────
-function renderProdChart(data) {
+function renderProdChart(data, prev) {
   if (!data.dates || data.dates.length === 0) { emptyChart('chart-prod'); return; }
+  const hp = prev && prev.dates && prev.dates.length > 0;
+  const series = [
+    { name: hp ? 'ACE-1 (saat ini)' : 'ACE-1 Prod%', type:'bar', data:data.prod1, barWidth:'30%', barGap:'5%',
+      itemStyle:{color:C.ace1,borderRadius:[3,3,0,0]} },
+    { name: hp ? 'ACE-2 (saat ini)' : 'ACE-2 Prod%', type:'bar', data:data.prod2, barWidth:'30%',
+      itemStyle:{color:C.ace2,borderRadius:[3,3,0,0]} },
+    { name:'Target', type:'line', data:data.dates.map(()=>data.target_prod),
+      lineStyle:LINE_TARGET, symbol:'none', itemStyle:{color:C.target} },
+  ];
+  if (hp) {
+    series.push({ name:'ACE-1 Prod (prev)', type:'line', data:prev.prod1, smooth:true,
+      lineStyle:{color:C.ace1,width:1.5,type:'dashed'}, symbol:'none', itemStyle:{color:C.ace1,opacity:0.55} });
+    series.push({ name:'ACE-2 Prod (prev)', type:'line', data:prev.prod2, smooth:true,
+      lineStyle:{color:C.ace2,width:1.5,type:'dashed'}, symbol:'none', itemStyle:{color:C.ace2,opacity:0.55} });
+  }
   initChart('chart-prod', {
-    grid: GRID, legend: LEGEND, tooltip: {
-      ...TOOLTIP_AXIS,
-      formatter: p => p.map(s => `${s.marker}${s.seriesName}: <b>${s.value !== null ? (s.value*100).toFixed(1)+'%' : '—'}</b>`).join('<br>')
-    },
-    xAxis: { type:'category', data:data.dates, axisLabel:{ ...AXIS_LBL, rotate: data.dates.length > 14 ? 30 : 0 } },
-    yAxis: { type:'value', min:_cc.prod_min||0.80, max:1.02, axisLabel:{ ...AXIS_LBL, formatter: v=>(v*100).toFixed(0)+'%' } },
-    series: [
-      { name:'ACE-1 Prod%', type:'bar', data:data.prod1, barWidth:'35%', barGap:'10%',
-        itemStyle:{ color:C.ace1, borderRadius:[3,3,0,0] } },
-      { name:'ACE-2 Prod%', type:'bar', data:data.prod2, barWidth:'35%',
-        itemStyle:{ color:C.ace2, borderRadius:[3,3,0,0] } },
-      { name:'Target 97%', type:'line', data:data.dates.map(()=>data.target_prod),
-        lineStyle:LINE_TARGET, symbol:'none', itemStyle:{color:C.target} },
-    ],
+    grid:GRID, legend:LEGEND,
+    tooltip:{...TOOLTIP_AXIS, formatter:p=>p.map(s=>`${s.marker}${s.seriesName}: <b>${s.value!==null?(s.value*100).toFixed(1)+'%':'—'}</b>`).join('<br>')},
+    xAxis:{type:'category',data:data.dates,axisLabel:{...AXIS_LBL,rotate:data.dates.length>14?30:0}},
+    yAxis:{type:'value',min:_cc.prod_min||0.80,max:1.02,axisLabel:{...AXIS_LBL,formatter:v=>(v*100).toFixed(0)+'%'}},
+    series,
   });
 }
 
@@ -171,10 +189,10 @@ function renderParetoChart(paretoData) {
 }
 
 // ── Render semua chart sekaligus ────────────────────────────
-function renderAllCharts(trendData, paretoData) {
-  renderMoldhChart(trendData);
-  renderRejectChart(trendData);
-  renderProdChart(trendData);
+function renderAllCharts(trendData, paretoData, prevTrendData) {
+  renderMoldhChart(trendData, prevTrendData || null);
+  renderRejectChart(trendData, prevTrendData || null);
+  renderProdChart(trendData, prevTrendData || null);
   renderEnergyChart(trendData);
   renderParetoChart(paretoData);
 }

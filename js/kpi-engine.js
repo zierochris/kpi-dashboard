@@ -308,6 +308,142 @@ function calcCompleteness(rows, period, customFrom, customTo) {
   };
 }
 
+// ══════════════════════════════════════════════════════════════
+// PHASE 6.2 — COMPARISON ENGINE
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * Kembalikan bounds {start, end, label} untuk PERIODE SEBELUMNYA
+ * berdasarkan period yang sedang aktif.
+ *
+ * Mapping:
+ *   today  → kemarin
+ *   week   → 7 hari sebelumnya (hari ke-8 s/d ke-14)
+ *   month  → bulan kalender sebelumnya
+ *   ytd    → FY sebelumnya (Apr 2025 – Mar 2026)
+ *   q1/q2/q3/q4 → quarter yang sama, FY sebelumnya
+ *   custom → rentang sama, mundur ke belakang
+ */
+function getPreviousPeriodBounds(currentPeriod, customFrom, customTo) {
+  const today = todayStr();
+
+  if (currentPeriod === 'today') {
+    const y = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    return { start: y, end: y, label: 'Kemarin' };
+  }
+
+  if (currentPeriod === 'week') {
+    const to   = new Date(Date.now() - 8  * 86400000).toISOString().split('T')[0];
+    const from = new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0];
+    return { start: from, end: to, label: '7 Hari Sebelumnya' };
+  }
+
+  if (currentPeriod === 'month') {
+    const now      = new Date();
+    const prevM    = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevEnd  = new Date(now.getFullYear(), now.getMonth(), 0);
+    const lbl      = prevM.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    return {
+      start: prevM.toISOString().split('T')[0],
+      end:   prevEnd.toISOString().split('T')[0],
+      label: lbl,
+    };
+  }
+
+  if (currentPeriod === 'ytd') {
+    // FY sebelumnya: Apr (prevFyYear) → Mar (prevFyYear+1)
+    const fy       = currentFYYear();
+    const prevFy   = fy - 1;
+    const sm       = CONFIG.FY_START_MONTH || 4;
+    const emMonth  = sm === 1 ? 12 : sm - 1;        // end month of prev FY
+    const emYear   = sm === 1 ? prevFy : prevFy + 1;
+    const lastDay  = new Date(emYear, emMonth, 0).getDate();
+    return {
+      start: `${prevFy}-${String(sm).padStart(2,'0')}-01`,
+      end:   `${emYear}-${String(emMonth).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`,
+      label: `YTD FY${String(prevFy).slice(-2)}`,
+    };
+  }
+
+  if (['q1','q2','q3','q4'].includes(currentPeriod)) {
+    const prevFy = currentFYYear() - 1;
+    const b      = getQuarterBounds(currentPeriod, prevFy);
+    return b ? b : null;
+  }
+
+  if (currentPeriod === 'custom' && customFrom && customTo) {
+    const from  = new Date(customFrom);
+    const to    = new Date(customTo);
+    const durMs = to.getTime() - from.getTime() + 86400000; // rentang inklusif
+    const pTo   = new Date(from.getTime() - 86400000);
+    const pFrom = new Date(pTo.getTime()  - durMs + 86400000);
+    const iso   = d => d.toISOString().split('T')[0];
+    const lbl   = d => d.toLocaleDateString('id-ID', { day:'2-digit', month:'short' });
+    return { start: iso(pFrom), end: iso(pTo), label: `${lbl(pFrom)} – ${lbl(pTo)}` };
+  }
+
+  return null;
+}
+
+/**
+ * Hitung delta antara dua aggregated objects.
+ * Kembalikan map: { kpi_id: { delta, deltaPct, direction, isImprovement } }
+ *
+ * direction: 'up' | 'down' | 'flat'
+ * isImprovement:
+ *   - true  = perubahan ini baik (hijau)
+ *   - false = perubahan ini buruk (merah)
+ *   - null  = tidak ada data sebelumnya
+ */
+function calcDelta(current, previous) {
+  if (!current || !previous) return {};
+
+  // Pasangan [key di aggregated, lowerIsBetter]
+  const pairs = [
+    ['ace1_moldh',      false],
+    ['ace1_prod',       false],
+    ['ace1_reject',     true ],
+    ['ace2_moldh',      false],
+    ['ace2_prod',       false],
+    ['ace2_reject',     true ],
+    ['finishing_prod',  false],
+    ['core_prod',       false],
+    ['furnace_kwh',     true ],
+    ['nonfurnace_kwh',  true ],
+    ['manhour_molding', true ],
+    ['safety_incident', true ],
+  ];
+
+  const out = {};
+  pairs.forEach(([key, lib]) => {
+    const curr = current[key];
+    const prev = previous[key];
+
+    if (curr == null || prev == null || isNaN(curr) || isNaN(prev)) {
+      out[key] = { delta: null, deltaPct: null, direction: 'flat', isImprovement: null };
+      return;
+    }
+
+    const delta    = curr - prev;
+    const EPSILON  = 0.00001;
+    const direction = Math.abs(delta) < EPSILON ? 'flat' : delta > 0 ? 'up' : 'down';
+
+    // Improvement: kalau lower_is_better → turun = baik; kalau higher_is_better → naik = baik
+    const isImprovement = direction === 'flat'
+      ? null
+      : lib ? direction === 'down' : direction === 'up';
+
+    out[key] = {
+      delta,
+      deltaPct: Math.abs(prev) > EPSILON ? delta / Math.abs(prev) : null,
+      direction,
+      isImprovement,
+    };
+  });
+
+  return out;
+}
+
 // ── Public helper: aggregasi dengan date range bebas ───────
 // Alias eksplisit — memanggil aggregateDaily dengan period='custom'
 function aggregateByCustomRange(rows, dateFrom, dateTo) {
