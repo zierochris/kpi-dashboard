@@ -11,6 +11,8 @@
 </head>
 <body class="bg-gray-50 min-h-screen" style="font-family:system-ui,-apple-system,sans-serif">
 
+<!-- Offline indicator -->
+<div class="offline-bar">⚡ Tidak ada koneksi internet — menampilkan data terakhir yang tersimpan</div>
 <div id="toast" class="toast"></div>
 
 <!-- ── HEADER ── -->
@@ -20,13 +22,19 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
     </div>
     <div class="min-w-0">
-      <div id="header-company" style="font-size:14px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">KPI Dashboard</div>
+      <div id="header-company" style="font-size:14px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">KPI</div>
       <div style="font-size:10px;opacity:0.65;line-height:1">Iron Foundry · FY2026</div>
     </div>
   </div>
   <div class="flex items-center gap-2 flex-shrink-0">
     <span id="last-updated" style="font-size:10px;opacity:0.6;display:none"></span>
-    <button onclick="manualRefresh()" style="background:rgba(255,255,255,0.12);border:none;border-radius:6px;padding:6px 10px;cursor:pointer;color:white;display:flex;align-items:center;gap:4px;font-size:12px">
+    <button onclick="printDashboard()" title="Print / Export PDF"
+      style="background:rgba(255,255,255,0.12);border:none;border-radius:6px;padding:6px 8px;cursor:pointer;color:white;display:flex;align-items:center;gap:4px;font-size:12px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      <span class="hidden sm:inline">Print</span>
+    </button>
+    <button onclick="manualRefresh()" title="Refresh data"
+      style="background:rgba(255,255,255,0.12);border:none;border-radius:6px;padding:6px 8px;cursor:pointer;color:white;display:flex;align-items:center;gap:4px;font-size:12px">
       <svg id="refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
       <span class="hidden sm:inline">Refresh</span>
     </button>
@@ -40,65 +48,138 @@
   <button class="tab-btn" onclick="switchTab('history',this)">📋 Riwayat</button>
 </nav>
 
+<!-- ════════════ PRINT HEADER (hidden on screen) ════════════ -->
+<div class="print-header" id="print-header">
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px">
+    <div>
+      <div style="font-size:18px;font-weight:700;color:#1B2A4A" id="ph-company"></div>
+      <div style="font-size:12px;color:#6b7280">Operational KPI Executive Dashboard · FY2026</div>
+    </div>
+    <div style="text-align:right;font-size:11px;color:#6b7280">
+      <div>Periode: <span id="ph-period"></span></div>
+      <div>Tanggal cetak: <span id="ph-date"></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Print scorecard table (hidden on screen) -->
+<table class="print-scorecard-table" id="print-table">
+  <thead>
+    <tr>
+      <th>Kategori</th><th>KPI</th><th>Target</th>
+      <th>Aktual YTD</th><th>Gap</th><th>Gap %</th><th>Status</th>
+    </tr>
+  </thead>
+  <tbody id="print-tbody"></tbody>
+  <tfoot>
+    <tr>
+      <td colspan="7" style="padding-top:12px">
+        <div class="print-sig">
+          <div class="print-sig-box">Plant Manager / COO</div>
+          <div class="print-sig-box">Quality Director</div>
+          <div class="print-sig-box">Ops Excellence Lead</div>
+          <div class="print-sig-box">CEO / Direktur</div>
+        </div>
+      </td>
+    </tr>
+  </tfoot>
+</table>
+
 <!-- ════════════════════ VIEW: DASHBOARD ════════════════════ -->
 <div id="view-dashboard" class="view p-3 max-w-7xl mx-auto">
-
-  <!-- Period selector -->
   <div class="flex items-center gap-2 mb-3 overflow-x-auto pb-1 flex-wrap">
     <span style="font-size:12px;color:#6b7280;white-space:nowrap;flex-shrink:0">Periode:</span>
+    <!-- Baris 1: period utama -->
     <button class="period-btn active" onclick="setPeriod('today',this)">Hari Ini</button>
     <button class="period-btn" onclick="setPeriod('week',this)">7 Hari</button>
     <button class="period-btn" onclick="setPeriod('month',this)">Bulan Ini</button>
     <button class="period-btn" onclick="setPeriod('ytd',this)">YTD FY26</button>
+    <!-- Toggle quarterly -->
+    <button id="toggle-more-periods" onclick="toggleMorePeriods()"
+      style="padding:5px 10px;border-radius:20px;font-size:12px;border:1.5px dashed #d1d5db;background:transparent;color:#6b7280;cursor:pointer;white-space:nowrap">
+      Q1–Q4 ▼
+    </button>
+    <!-- Custom date range -->
+    <button onclick="openCustomModal()"
+      style="padding:5px 10px;border-radius:20px;font-size:12px;border:1.5px dashed #d1d5db;background:transparent;color:#6b7280;cursor:pointer;white-space:nowrap">
+      📅 Custom
+    </button>
     <div id="completeness-badge" style="display:none;margin-left:auto;font-size:11px;padding:3px 10px;border-radius:20px;background:#E6F1FB;color:#0C447C;white-space:nowrap;flex-shrink:0"></div>
   </div>
 
-  <!-- Loading -->
+  <!-- Baris 2: Quarterly buttons (hidden by default) -->
+  <div id="quarterly-row" style="display:none;margin-bottom:10px;display:none">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span style="font-size:11px;color:#9ca3af;white-space:nowrap">Quarter FY:</span>
+      <button class="period-btn" id="btn-q1" onclick="setPeriod('q1',this)">Q1 Apr–Jun</button>
+      <button class="period-btn" id="btn-q2" onclick="setPeriod('q2',this)">Q2 Jul–Sep</button>
+      <button class="period-btn" id="btn-q3" onclick="setPeriod('q3',this)">Q3 Oct–Dec</button>
+      <button class="period-btn" id="btn-q4" onclick="setPeriod('q4',this)">Q4 Jan–Mar</button>
+      <span id="current-q-badge" style="font-size:10px;background:#E6F1FB;color:#0C447C;padding:2px 8px;border-radius:20px;display:none">← Sekarang</span>
+    </div>
+  </div>
+
+  <!-- Custom Date Modal -->
+  <div id="custom-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:16px;padding:20px;width:min(90vw,360px);box-shadow:0 20px 60px rgba(0,0,0,0.2)">
+      <div style="font-size:15px;font-weight:600;color:#1B2A4A;margin-bottom:16px">📅 Pilih Rentang Tanggal</div>
+      <div style="display:grid;gap:12px">
+        <div>
+          <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px">Dari Tanggal</label>
+          <input type="date" id="custom-from" class="form-input" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px">Sampai Tanggal</label>
+          <input type="date" id="custom-to" class="form-input" style="width:100%">
+        </div>
+        <div id="custom-error" style="display:none;font-size:12px;color:#C62828;background:#FDECEA;padding:8px 10px;border-radius:6px"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button onclick="closeCustomModal()"
+          style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #d1d5db;background:white;color:#374151;font-size:13px;cursor:pointer">
+          Batal
+        </button>
+        <button onclick="applyCustomRange()"
+          style="flex:1;padding:10px;border-radius:8px;border:none;background:#1B2A4A;color:white;font-size:13px;font-weight:600;cursor:pointer">
+          Terapkan
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="dash-loading" class="flex flex-col items-center justify-center py-16 gap-4">
     <div class="spinner"></div>
     <p style="font-size:13px;color:#9ca3af">Memuat data dari Google Sheets...</p>
   </div>
 
-  <!-- Error -->
   <div id="dash-error" class="hidden">
-    <div style="background:#FDECEA;border-radius:10px;padding:20px;text-align:center">
-      <div style="font-size:28px;margin-bottom:8px">⚠️</div>
-      <div style="font-size:14px;font-weight:600;color:#C62828;margin-bottom:6px">Gagal memuat data</div>
-      <div id="dash-error-msg" style="font-size:12px;color:#6b7280;margin-bottom:14px;max-width:360px;margin-left:auto;margin-right:auto"></div>
-      <button onclick="loadDashboard()" class="period-btn active">Coba Lagi</button>
+    <div style="background:#FDECEA;border-radius:12px;padding:24px;text-align:center;max-width:480px;margin:0 auto">
+      <div style="font-size:32px;margin-bottom:10px">⚠️</div>
+      <div style="font-size:15px;font-weight:600;color:#C62828;margin-bottom:6px">Gagal memuat data</div>
+      <div id="dash-error-msg" style="font-size:12px;color:#6b7280;margin-bottom:6px"></div>
+      <div style="font-size:11px;color:#9ca3af;margin-bottom:16px">Pastikan Sheet ID benar dan Google Sheets sudah di-share publik (Anyone with link → Viewer)</div>
+      <button onclick="loadDashboard()" class="period-btn active">🔄 Coba Lagi</button>
     </div>
   </div>
 
-  <!-- Content -->
   <div id="dash-content" class="hidden">
-
-    <!-- Empty banner -->
     <div id="dash-empty-banner" style="display:none;background:#FFF8E1;border-radius:8px;padding:9px 13px;font-size:12px;color:#E65100;margin-bottom:10px;border-left:3px solid #E65100"></div>
-
-    <!-- KPI Scorecard -->
     <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">KPI Scorecard</div>
     <div id="kpi-grid" class="kpi-grid grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-5"></div>
-
-    <!-- Section: Trend Charts (2x2) -->
     <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Trend Produksi & Kualitas</div>
     <div class="chart-grid grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
       <div class="chart-box"><div class="chart-title">Mold/Hour — ACE-1 vs ACE-2</div><div id="chart-moldh" style="height:200px"></div></div>
       <div class="chart-box"><div class="chart-title">Rejection Rate %</div><div id="chart-reject" style="height:200px"></div></div>
-      <div class="chart-box"><div class="chart-title">Productivity % (Bar)</div><div id="chart-prod" style="height:200px"></div></div>
+      <div class="chart-box"><div class="chart-title">Productivity %</div><div id="chart-prod" style="height:200px"></div></div>
       <div class="chart-box"><div class="chart-title">Electrical Energy (kWH/hari)</div><div id="chart-energy" style="height:200px"></div></div>
     </div>
-
-    <!-- Section: Rejection Pareto -->
-    <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Rejection Pareto — By Defect Category</div>
+    <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Rejection Pareto</div>
     <div class="chart-box mb-5">
-      <div class="chart-title">Top Defect Categories (Pareto Chart) <span id="pareto-total" style="font-weight:400;color:#9ca3af"></span></div>
+      <div class="chart-title">Top Defect Categories <span id="pareto-total" style="font-weight:400;color:#9ca3af"></span></div>
       <div id="chart-pareto" style="height:220px"></div>
     </div>
-
-    <!-- Section: Alerts -->
     <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">⚠️ KPI Alert</div>
     <div id="alert-section" class="mb-4"></div>
-
   </div>
 </div>
 
@@ -106,10 +187,16 @@
 <div id="view-input" class="view hidden p-3 max-w-2xl mx-auto pb-24">
   <div class="bg-white rounded-xl shadow-sm p-4 mb-3">
     <div style="font-size:15px;font-weight:600;color:#1B2A4A;margin-bottom:2px">Input Data Harian</div>
-    <div style="font-size:12px;color:#9ca3af">Isi semua field lalu Submit. Data tersimpan otomatis ke Google Sheets.</div>
+    <div style="font-size:12px;color:#9ca3af">Isi semua field lalu Submit. Data tersimpan ke Google Sheets.</div>
   </div>
-  <form id="daily-form" onsubmit="handleSubmit(event)" novalidate>
 
+  <!-- Draft indicator -->
+  <div id="draft-banner" style="display:none;background:#E6F1FB;border-radius:8px;padding:8px 13px;font-size:12px;color:#0C447C;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+    <span>💾 Draft tersimpan — lanjutkan pengisian?</span>
+    <button onclick="clearDraft()" style="margin-left:auto;font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid #0C447C;background:transparent;color:#0C447C;cursor:pointer">Hapus Draft</button>
+  </div>
+
+  <form id="daily-form" onsubmit="handleSubmit(event)" novalidate>
     <div class="section-head">👤 Identitas Shift</div>
     <div class="bg-white rounded-xl p-4 space-y-3">
       <div class="grid grid-cols-2 gap-3">
@@ -127,18 +214,18 @@
     <div class="section-head">🔵 Produksi ACE-1</div>
     <div class="bg-white rounded-xl p-4 space-y-3">
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="form-label">Mold/Hour actual</label><input type="number" id="f-ace1-moldh" class="form-input" min="0" max="200" step="0.1" placeholder="148.5"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 148.5</div></div>
+        <div><label class="form-label">Mold/Hour actual</label><input type="number" id="f-ace1-moldh" class="form-input" min="0" max="200" step="0.1" placeholder="148.5"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 148.5 Mold/H</div></div>
         <div><label class="form-label">Output (Mold)</label><input type="number" id="f-ace1-output" class="form-input" min="0" step="1" placeholder="1180"></div>
       </div>
       <div>
-        <label class="form-label">Loss Time % <span style="color:#9ca3af">(BDT | PourWait | Loss Mold | Other)</span></label>
+        <label class="form-label">Loss Time % <span style="color:#9ca3af;font-weight:400">(BDT | PourWait | Loss Mold | Other)</span></label>
         <div class="grid grid-cols-4 gap-2">
           <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">BDT</div><input type="number" id="f-ace1-bdt" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
           <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">PW</div><input type="number" id="f-ace1-pw" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
           <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Mold</div><input type="number" id="f-ace1-mold" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
           <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Other</div><input type="number" id="f-ace1-other" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
         </div>
-        <div style="font-size:12px;color:#374151;margin-top:5px">Prod%: <span id="ace1-prod-calc" style="font-weight:600;color:#1B2A4A">—</span></div>
+        <div style="font-size:12px;margin-top:5px">Prod%: <span id="ace1-prod-calc" style="font-weight:600;color:#1B2A4A">—</span></div>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div><label class="form-label">Reject (pcs)</label><input type="number" id="f-ace1-reject" class="form-input" min="0" step="1" placeholder="0"></div>
@@ -149,18 +236,18 @@
     <div class="section-head">🟠 Produksi ACE-2</div>
     <div class="bg-white rounded-xl p-4 space-y-3">
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="form-label">Mold/Hour actual</label><input type="number" id="f-ace2-moldh" class="form-input" min="0" max="200" step="0.1" placeholder="148.5"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 148.5</div></div>
+        <div><label class="form-label">Mold/Hour actual</label><input type="number" id="f-ace2-moldh" class="form-input" min="0" max="200" step="0.1" placeholder="148.5"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 148.5 Mold/H</div></div>
         <div><label class="form-label">Output (Mold)</label><input type="number" id="f-ace2-output" class="form-input" min="0" step="1" placeholder="1180"></div>
       </div>
       <div>
-        <label class="form-label">Loss Time % <span style="color:#9ca3af">(BDT | PW | Mold | Other)</span></label>
+        <label class="form-label">Loss Time % <span style="color:#9ca3af;font-weight:400">(BDT | PW | Mold | Other)</span></label>
         <div class="grid grid-cols-4 gap-2">
           <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">BDT</div><input type="number" id="f-ace2-bdt" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
           <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">PW</div><input type="number" id="f-ace2-pw" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
           <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Mold</div><input type="number" id="f-ace2-mold" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
           <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Other</div><input type="number" id="f-ace2-other" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
         </div>
-        <div style="font-size:12px;color:#374151;margin-top:5px">Prod%: <span id="ace2-prod-calc" style="font-weight:600;color:#1B2A4A">—</span></div>
+        <div style="font-size:12px;margin-top:5px">Prod%: <span id="ace2-prod-calc" style="font-weight:600;color:#1B2A4A">—</span></div>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div><label class="form-label">Reject (pcs)</label><input type="number" id="f-ace2-reject" class="form-input" min="0" step="1" placeholder="0"></div>
@@ -180,7 +267,7 @@
     <div class="bg-white rounded-xl p-4 space-y-3">
       <div>
         <label class="form-label">Ada insiden hari ini?</label>
-        <div class="flex gap-4">
+        <div class="flex gap-4 mt-1">
           <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer">
             <input type="radio" name="safety" id="safety-no" value="0" checked onchange="toggleSafety(false)"> Tidak ada
           </label>
@@ -195,33 +282,34 @@
             <option value="">Pilih...</option>
             <option>Work Accident</option><option>Fire Accident</option>
             <option>Traffic Accident</option><option>Near Miss</option>
+            <option>Unsafe Action</option><option>Unsafe Condition</option>
           </select>
         </div>
-        <div><label class="form-label">Deskripsi</label><input type="text" id="f-safety-desc" class="form-input" placeholder="Jelaskan kejadian..."></div>
+        <div><label class="form-label">Deskripsi singkat</label><input type="text" id="f-safety-desc" class="form-input" placeholder="Jelaskan kejadian..."></div>
       </div>
     </div>
 
     <div class="section-head">⚡ Energi (Gentani)</div>
     <div class="bg-white rounded-xl p-4">
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="form-label">Electrical Furnace (kWH)</label><input type="number" id="f-furnace" class="form-input" min="0" step="1" placeholder="4400"></div>
+        <div><label class="form-label">Electrical Furnace (kWH)</label><input type="number" id="f-furnace" class="form-input" min="0" step="1" placeholder="4400"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Total kWH hari ini</div></div>
         <div><label class="form-label">Non-Furnace (kWH)</label><input type="number" id="f-nonfurnace" class="form-input" min="0" step="1" placeholder="1600"></div>
       </div>
     </div>
 
     <div class="section-head">📝 Catatan</div>
     <div class="bg-white rounded-xl p-4">
-      <textarea id="f-notes" class="form-input" rows="3" placeholder="Masalah khusus, info penting... (opsional)"></textarea>
+      <textarea id="f-notes" class="form-input" rows="3" placeholder="Masalah khusus, breakdown, info penting... (opsional)"></textarea>
     </div>
 
-    <!-- Preview & Submit -->
     <div class="bg-white rounded-xl p-4 mt-3 space-y-3">
       <div id="form-preview" class="hidden" style="background:#F0F9FF;border-radius:8px;padding:12px;font-size:12px;color:#374151;line-height:1.9"></div>
       <div id="form-error-msg" class="hidden" style="background:#FDECEA;border-radius:8px;padding:10px 12px;font-size:12px;color:#C62828"></div>
       <button type="button" onclick="previewForm()" class="period-btn w-full" style="border-color:#1B2A4A;color:#1B2A4A;font-size:13px;padding:10px">
         👁️ Preview sebelum submit
       </button>
-      <button type="submit" id="submit-btn" style="width:100%;background:#1B2A4A;color:white;border:none;border-radius:8px;padding:14px;font-size:14px;font-weight:600;cursor:pointer">
+      <button type="submit" id="submit-btn"
+        style="width:100%;background:#1B2A4A;color:white;border:none;border-radius:8px;padding:14px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s">
         ✓ Submit Data
       </button>
     </div>
@@ -230,23 +318,48 @@
 
 <!-- ════════════════════ VIEW: RIWAYAT ════════════════════ -->
 <div id="view-history" class="view hidden p-3 max-w-7xl mx-auto">
-  <div class="bg-white rounded-xl shadow-sm p-4 mb-3 flex items-center justify-between">
-    <div>
-      <div style="font-size:14px;font-weight:600;color:#1B2A4A">Riwayat Input Harian</div>
-      <div id="history-count" style="font-size:12px;color:#9ca3af">Memuat...</div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <div class="filter-label">Dari Tanggal</div>
+      <input type="date" id="f-hist-from" class="filter-input">
     </div>
-    <button onclick="downloadCSV()" class="period-btn" style="border-color:#1B2A4A;color:#1B2A4A">⬇️ CSV</button>
+    <div class="filter-group">
+      <div class="filter-label">Sampai Tanggal</div>
+      <input type="date" id="f-hist-to" class="filter-input">
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Shift</div>
+      <select id="f-hist-shift" class="filter-input">
+        <option value="">Semua Shift</option>
+        <option>Shift 1</option><option>Shift 2</option><option>Shift 3</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Cari Operator</div>
+      <input type="text" id="f-hist-search" class="filter-input" placeholder="Nama..." style="width:120px">
+    </div>
+    <div style="display:flex;gap:6px;align-items:flex-end">
+      <button class="filter-btn apply" onclick="applyFilter()">🔍 Filter</button>
+      <button class="filter-btn reset" onclick="resetFilter()">↩ Reset</button>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:flex-end;gap:8px">
+      <span id="history-count" style="font-size:12px;color:#9ca3af;white-space:nowrap"></span>
+      <button onclick="downloadCSV()" class="filter-btn" style="background:#1B2A4A;color:white;">⬇️ CSV</button>
+    </div>
   </div>
+
   <div id="hist-loading" class="flex justify-center py-12"><div class="spinner"></div></div>
   <div id="hist-table" class="hidden bg-white rounded-xl shadow-sm overflow-hidden">
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead>
           <tr style="background:#1B2A4A;color:white">
-            <th style="padding:10px 12px;text-align:left;white-space:nowrap">Tanggal</th>
+            <th style="padding:10px 12px;text-align:left;white-space:nowrap;cursor:pointer" onclick="sortHistory('date')">Tanggal ↕</th>
             <th style="padding:10px 12px;text-align:left">Shift</th>
-            <th style="padding:10px 12px;text-align:right">ACE-1 Mold/H</th>
-            <th style="padding:10px 12px;text-align:right">ACE-2 Mold/H</th>
+            <th style="padding:10px 12px;text-align:right;white-space:nowrap;cursor:pointer" onclick="sortHistory('ace1_moldh')">ACE-1 Mold/H ↕</th>
+            <th style="padding:10px 12px;text-align:right;white-space:nowrap;cursor:pointer" onclick="sortHistory('ace2_moldh')">ACE-2 Mold/H ↕</th>
             <th style="padding:10px 12px;text-align:right">Rej% ACE-1</th>
             <th style="padding:10px 12px;text-align:right">Rej% ACE-2</th>
             <th style="padding:10px 12px;text-align:center">Safety</th>
@@ -256,83 +369,164 @@
         <tbody id="hist-tbody"></tbody>
       </table>
     </div>
+    <!-- Pagination -->
+    <div id="hist-pagination" style="padding:12px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #f3f4f6;font-size:12px;color:#6b7280">
+      <span id="page-info"></span>
+      <div style="display:flex;gap:6px">
+        <button id="btn-prev" onclick="changePage(-1)" class="filter-btn reset" style="padding:4px 12px">← Sebelumnya</button>
+        <button id="btn-next" onclick="changePage(1)"  class="filter-btn apply" style="padding:4px 12px">Berikutnya →</button>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- ── SCRIPTS ── -->
 <script src="js/data-loader.js"></script>
 <script src="js/kpi-engine.js"></script>
 <script src="js/charts.js"></script>
 <script>
 // ── State ─────────────────────────────────────────────────
-let currentView   = 'dashboard';
-let currentPeriod = 'today';
-let _dailyRows    = null;
-let _monthlyRows  = null;
-let _rejRows      = null;
-let historyData   = [];
+let currentView    = 'dashboard';
+let currentPeriod  = 'today';
+let customDateFrom = null;  // untuk period 'custom'
+let customDateTo   = null;
+let _dailyRows     = null;
+let _monthlyRows   = null;
+let _rejRows       = null;
+let historyData    = [];
+let filteredData   = [];
+let sortCol        = 'date';
+let sortAsc        = false;
+let currentPage    = 1;
+const PAGE_SIZE    = 30;
 
-// ── Toast ─────────────────────────────────────────────────
-let _toastTimer;
+// ── Offline detection ──────────────────────────────────────
+function updateOnlineStatus() {
+  document.body.classList.toggle('offline', !navigator.onLine);
+}
+window.addEventListener('online',  updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// ── Toast ──────────────────────────────────────────────────
+let _tt;
 function showToast(msg, type='info', ms=3500) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = `toast show ${type}`;
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+  clearTimeout(_tt); _tt = setTimeout(() => t.classList.remove('show'), ms);
 }
 
-// ── Navigation ────────────────────────────────────────────
+// ── Navigation ─────────────────────────────────────────────
 function switchTab(view, btn) {
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-'+view).classList.remove('hidden');
   btn.classList.add('active');
   currentView = view;
-  if (view === 'dashboard' && !_dailyRows) loadDashboard();
-  if (view === 'history') loadHistory();
+  if (view === 'dashboard' && !_dailyRows) // Show version in console for debugging
+console.info(`KPI Dashboard v${typeof APP_VERSION !== 'undefined' ? APP_VERSION : '?'} loaded`);
+loadDashboard();
+  if (view === 'history')   loadHistory();
 }
 
 function setPeriod(period, btn) {
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
   currentPeriod = period;
   if (_dailyRows !== null) renderDashboard();
 }
 
-// ── Dashboard Load ─────────────────────────────────────────
-async function loadDashboard() {
-  document.getElementById('dash-loading').classList.remove('hidden');
-  document.getElementById('dash-content').classList.add('hidden');
-  document.getElementById('dash-error').classList.add('hidden');
+// ── Quarterly UI ───────────────────────────────────────────
+let _quarterRowVisible = false;
 
-  if (CONFIG.SHEET_ID === 'PASTE_SHEET_ID_DISINI') {
-    showDashError('Sheet ID belum diisi di config.js');
+function toggleMorePeriods() {
+  _quarterRowVisible = !_quarterRowVisible;
+  const row = document.getElementById('quarterly-row');
+  const btn = document.getElementById('toggle-more-periods');
+  row.style.display = _quarterRowVisible ? 'block' : 'none';
+  btn.textContent   = _quarterRowVisible ? 'Q1–Q4 ▲' : 'Q1–Q4 ▼';
+
+  // Highlight tombol quarter yang sedang aktif
+  if (_quarterRowVisible) {
+    const cq  = currentQuarter();
+    const cqb = document.getElementById(`btn-${cq}`);
+    const badge = document.getElementById('current-q-badge');
+    if (cqb && badge) {
+      badge.style.display = 'inline-block';
+      cqb.after(badge);
+    }
+  }
+}
+
+// ── Custom Date Range ──────────────────────────────────────
+function openCustomModal() {
+  const modal = document.getElementById('custom-modal');
+  modal.style.display = 'flex';
+  document.getElementById('custom-error').style.display = 'none';
+  // Set default: 30 hari lalu s/d hari ini
+  if (!document.getElementById('custom-from').value) {
+    const monthAgo = new Date(Date.now() - 30*86400000).toISOString().split('T')[0];
+    document.getElementById('custom-from').value = monthAgo;
+    document.getElementById('custom-to').value   = new Date().toISOString().split('T')[0];
+  }
+}
+
+function closeCustomModal() {
+  document.getElementById('custom-modal').style.display = 'none';
+}
+
+function applyCustomRange() {
+  const from = document.getElementById('custom-from').value;
+  const to   = document.getElementById('custom-to').value;
+  const errEl = document.getElementById('custom-error');
+
+  if (!from || !to) {
+    errEl.textContent = 'Isi kedua tanggal terlebih dahulu.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (from > to) {
+    errEl.textContent = '"Dari" tidak boleh lebih besar dari "Sampai".';
+    errEl.style.display = 'block';
+    return;
+  }
+  const dayDiff = Math.ceil((new Date(to) - new Date(from)) / 86400000);
+  if (dayDiff > 366) {
+    errEl.textContent = 'Rentang maksimal 1 tahun (366 hari).';
+    errEl.style.display = 'block';
     return;
   }
 
-  try {
-    // Fetch 3 sumber data secara paralel
-    const [daily, monthly, rejection] = await Promise.allSettled([
-      getDailyInputs(),
-      getMonthlySummary(),
-      getRejectionDetail(),
-    ]);
+  customDateFrom = from;
+  customDateTo   = to;
+  closeCustomModal();
 
+  // Update period selector: hilangkan active dari semua, set custom active
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  currentPeriod = 'custom';
+  if (_dailyRows !== null) renderDashboard();
+}
+
+// ── Dashboard ──────────────────────────────────────────────
+async function loadDashboard() {
+  ['dash-loading'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+  ['dash-content','dash-error'].forEach(id => document.getElementById(id).classList.add('hidden'));
+
+  if (CONFIG.SHEET_ID === 'PASTE_SHEET_ID_DISINI') {
+    return showDashError('Sheet ID belum diisi di config.js');
+  }
+  try {
+    const [daily, monthly, rej] = await Promise.allSettled([
+      getDailyInputs({ days: 180 }), getMonthlySummary(), getRejectionDetail()
+    ]);
     _dailyRows   = daily.status   === 'fulfilled' ? daily.value   : [];
     _monthlyRows = monthly.status === 'fulfilled' ? monthly.value : [];
-    _rejRows     = rejection.status === 'fulfilled' ? rejection.value : [];
-
+    _rejRows     = rej.status     === 'fulfilled' ? rej.value     : [];
     if (daily.status === 'rejected') throw daily.reason;
-
     renderDashboard();
-
-    const now = new Date().toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'});
-    const lu  = document.getElementById('last-updated');
-    lu.textContent = 'Update: ' + now; lu.style.display = 'block';
-
-  } catch(err) {
-    showDashError(err.message);
-  }
+    const lu = document.getElementById('last-updated');
+    lu.textContent = 'Update: ' + new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+    lu.style.display = 'block';
+  } catch(err) { showDashError(err.message); }
 }
 
 function showDashError(msg) {
@@ -341,65 +535,52 @@ function showDashError(msg) {
   document.getElementById('dash-error-msg').textContent = msg;
 }
 
-// ── Dashboard Render ───────────────────────────────────────
 function renderDashboard() {
   document.getElementById('dash-loading').classList.add('hidden');
   document.getElementById('dash-content').classList.remove('hidden');
+  const rows = _dailyRows || [];
 
-  const rows  = _dailyRows || [];
-  let   agg   = aggregateDaily(rows, currentPeriod);
+  // Pass custom range jika period === 'custom'
+  let agg = aggregateDaily(rows, currentPeriod, customDateFrom, customDateTo);
   agg = injectMonthlyData(agg, _monthlyRows || [], currentPeriod);
 
-  // Empty state
-  const banner = document.getElementById('dash-empty-banner');
+  // Empty banner
+  const banner    = document.getElementById('dash-empty-banner');
+  const periodLbl = getPeriodLabel(currentPeriod, customDateFrom, customDateTo);
   if (!agg && rows.length > 0) {
-    const labels = { today:'Hari Ini', week:'7 Hari', month:'Bulan Ini', ytd:'YTD FY26' };
-    banner.textContent = `Tidak ada data untuk periode "${labels[currentPeriod] || currentPeriod}". Scorecard menampilkan "No Data".`;
+    banner.textContent = `Tidak ada data untuk periode "${periodLbl}". Scorecard menampilkan "No Data".`;
     banner.style.display = 'block';
-  } else if (rows.length === 0) {
+  } else if (!rows.length) {
     banner.textContent = 'Belum ada data. Isi tab Input Harian untuk mulai.';
     banner.style.display = 'block';
-  } else {
-    banner.style.display = 'none';
-  }
+  } else { banner.style.display = 'none'; }
 
-  // Completeness badge
-  const comp  = calcCompleteness(rows, currentPeriod);
+  // Completeness badge — tampilkan period label yang benar
+  const comp  = calcCompleteness(rows, currentPeriod, customDateFrom, customDateTo);
   const badge = document.getElementById('completeness-badge');
   if (comp.filled > 0) {
-    badge.textContent  = `📋 ${comp.filled} shift (${comp.days} hari) | ${comp.pct}% lengkap`;
+    const qLabel = comp.periodLabel ? `${comp.periodLabel} | ` : '';
+    badge.textContent  = `📋 ${qLabel}${comp.filled} shift | ${comp.pct}% lengkap`;
     badge.style.display = 'block';
     badge.style.background = comp.pct >= 80 ? '#E1F5EE' : '#FFF8E1';
     badge.style.color      = comp.pct >= 80 ? '#085041' : '#633806';
-  } else {
-    badge.style.display = 'none';
-  }
+  } else { badge.style.display = 'none'; }
 
-  // Scorecard
   const cards = buildScorecard(agg);
   renderScorecard(cards);
-
-  // Charts
-  const trend  = buildTrendData(rows, 30);
-  const pareto = buildRejectPareto(_rejRows || []);
-
-  // Update pareto total label
-  const ptotal = document.getElementById('pareto-total');
-  if (pareto.total > 0) ptotal.textContent = `— Total: ${pareto.total.toLocaleString()} pcs`;
-  else ptotal.textContent = '';
-
-  renderAllCharts(trend, pareto);
-
-  // Alerts
+  buildPrintTable(cards);
+  renderAllCharts(buildTrendData(rows, 30), buildRejectPareto(_rejRows || []));
   renderAlerts(cards);
+
+  const pt = document.getElementById('pareto-total');
+  const p  = buildRejectPareto(_rejRows || []);
+  pt.textContent = p.total > 0 ? `— Total: ${p.total.toLocaleString()} pcs` : '';
 }
 
 function renderScorecard(cards) {
-  const grid = document.getElementById('kpi-grid');
-  grid.innerHTML = cards.map(kpi => {
+  document.getElementById('kpi-grid').innerHTML = cards.map(kpi => {
     const style = kpi.style || RAG_STYLE['nodata'];
-    return `
-    <div class="kpi-card">
+    return `<div class="kpi-card">
       <div class="kpi-cat">${kpi.cat}</div>
       <div class="kpi-name">${kpi.label}</div>
       <div class="kpi-val val-${kpi.rag}">${kpi.fmtActual}</div>
@@ -410,23 +591,50 @@ function renderScorecard(cards) {
 }
 
 function renderAlerts(cards) {
-  const el     = document.getElementById('alert-section');
+  const el = document.getElementById('alert-section');
   const alerts = cards.filter(k => k.rag === 'red' || k.rag === 'amber');
-  if (alerts.length === 0) {
-    el.innerHTML = '<div style="background:#E8F5E9;border-radius:10px;padding:14px;text-align:center;color:#1B5E20;font-size:13px">✓ Semua KPI dalam kondisi baik untuk periode ini</div>';
+  if (!alerts.length) {
+    el.innerHTML = '<div style="background:#E8F5E9;border-radius:10px;padding:14px;text-align:center;color:#1B5E20;font-size:13px">✓ Semua KPI dalam kondisi baik</div>';
     return;
   }
   el.innerHTML = alerts.map(a => {
     const style = a.style || RAG_STYLE['nodata'];
     const gap   = a.gapPct !== null ? ` | Gap: ${(a.gapPct*100).toFixed(1)}%` : '';
-    return `
-    <div class="alert-item ${a.rag === 'amber' ? 'amber' : ''}">
+    return `<div class="alert-item ${a.rag==='amber'?'amber':''}">
       <div>
         <div style="font-size:12px;font-weight:600">${style.icon} ${a.cat} — ${a.label}</div>
-        <div style="font-size:11px;opacity:0.75;margin-top:2px">Actual: ${a.fmtActual} | Target: ${a.fmtTarget} ${a.unit}${gap}</div>
+        <div style="font-size:11px;opacity:.75;margin-top:2px">Actual: ${a.fmtActual} | Target: ${a.fmtTarget} ${a.unit}${gap}</div>
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Print / BOD View ───────────────────────────────────────
+function buildPrintTable(cards) {
+  const labels = {today:'Hari Ini', week:'7 Hari', month:'Bulan Ini', ytd:'YTD FY26'};
+  document.getElementById('ph-company').textContent = CONFIG.COMPANY_NAME + ' — Operational KPI Dashboard';
+  document.getElementById('ph-period').textContent  = labels[currentPeriod] || currentPeriod;
+  document.getElementById('ph-date').textContent    = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+
+  document.getElementById('print-tbody').innerHTML = cards.map(kpi => {
+    const style = kpi.style || RAG_STYLE['nodata'];
+    const gapPct = kpi.gapPct !== null ? (kpi.gapPct*100).toFixed(1)+'%' : '—';
+    return `<tr>
+      <td>${kpi.cat}</td>
+      <td>${kpi.label}</td>
+      <td>${kpi.fmtTarget} ${kpi.unit}</td>
+      <td style="font-weight:600">${kpi.fmtActual}</td>
+      <td>${kpi.gap !== null ? (kpi.gap >= 0 ? '+' : '') + kpi.fmtActual : '—'}</td>
+      <td>${gapPct}</td>
+      <td style="color:${style.text};font-weight:600">${style.icon} ${style.label}</td>
+    </tr>`;
+  }).join('');
+}
+
+function printDashboard() {
+  if (!_dailyRows) { showToast('Muat dashboard dulu sebelum print','error'); return; }
+  showToast('Membuka dialog print...','info',2000);
+  setTimeout(() => window.print(), 300);
 }
 
 // ── History ────────────────────────────────────────────────
@@ -435,9 +643,10 @@ async function loadHistory() {
   document.getElementById('hist-table').classList.add('hidden');
   document.getElementById('history-count').textContent = 'Memuat...';
   try {
-    const rows = await getDailyInputs();
-    historyData = rows;
-    renderHistory(rows);
+    historyData  = await getDailyInputs({ full: true }); // export butuh semua data
+    filteredData = [...historyData].sort((a,b) => String(b.date).localeCompare(String(a.date)));
+    currentPage  = 1;
+    renderHistoryTable();
   } catch(err) {
     document.getElementById('hist-loading').classList.add('hidden');
     document.getElementById('hist-table').classList.remove('hidden');
@@ -447,57 +656,163 @@ async function loadHistory() {
   }
 }
 
-function renderHistory(rows) {
+function applyFilter() {
+  const from   = document.getElementById('f-hist-from').value;
+  const to     = document.getElementById('f-hist-to').value;
+  const shift  = document.getElementById('f-hist-shift').value;
+  const search = document.getElementById('f-hist-search').value.toLowerCase();
+
+  filteredData = historyData.filter(r => {
+    if (from   && String(r.date) < from)  return false;
+    if (to     && String(r.date) > to)    return false;
+    if (shift  && r.shift !== shift)      return false;
+    if (search && !String(r.submitted_by || '').toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  // Apply sort
+  filteredData.sort((a,b) => {
+    const va = String(a[sortCol] || ''), vb = String(b[sortCol] || '');
+    return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+
+  currentPage = 1;
+  renderHistoryTable();
+}
+
+function resetFilter() {
+  document.getElementById('f-hist-from').value  = '';
+  document.getElementById('f-hist-to').value    = '';
+  document.getElementById('f-hist-shift').value = '';
+  document.getElementById('f-hist-search').value = '';
+  filteredData = [...historyData].sort((a,b) => String(b.date).localeCompare(String(a.date)));
+  currentPage = 1;
+  renderHistoryTable();
+}
+
+function sortHistory(col) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = false; }
+  applyFilter();
+}
+
+function changePage(dir) {
+  const total = Math.ceil(filteredData.length / PAGE_SIZE);
+  currentPage = Math.min(Math.max(1, currentPage + dir), total);
+  renderHistoryTable();
+}
+
+function renderHistoryTable() {
   document.getElementById('hist-loading').classList.add('hidden');
   document.getElementById('hist-table').classList.remove('hidden');
-  const sorted = [...rows].sort((a,b) => String(b.date).localeCompare(String(a.date)));
-  document.getElementById('history-count').textContent = sorted.length + ' entri';
+
+  const total   = filteredData.length;
+  const start   = (currentPage-1) * PAGE_SIZE;
+  const end     = Math.min(start + PAGE_SIZE, total);
+  const paged   = filteredData.slice(start, end);
+  const pages   = Math.ceil(total / PAGE_SIZE);
+
+  document.getElementById('history-count').textContent = `${total} entri`;
+  document.getElementById('page-info').textContent     = total > 0 ? `Menampilkan ${start+1}–${end} dari ${total}` : '';
+  document.getElementById('btn-prev').disabled = currentPage <= 1;
+  document.getElementById('btn-next').disabled = currentPage >= pages;
+
   const tbody = document.getElementById('hist-tbody');
-  if (!sorted.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="padding:20px;text-align:center;color:#9ca3af">Belum ada data. Isi form Input Harian untuk mulai.</td></tr>';
+  if (!paged.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="padding:20px;text-align:center;color:#9ca3af">
+      ${total === 0 && historyData.length > 0 ? 'Tidak ada data yang cocok dengan filter.' : 'Belum ada data.'}
+    </td></tr>`;
     return;
   }
-  tbody.innerHTML = sorted.map((r, i) => {
-    const rej1 = (parseFloat(r.output_ace1_mold) > 0) ? ((parseFloat(r.reject_ace1_pcs)/parseFloat(r.output_ace1_mold))*100).toFixed(2)+'%' : '—';
-    const rej2 = (parseFloat(r.output_ace2_mold) > 0) ? ((parseFloat(r.reject_ace2_pcs)/parseFloat(r.output_ace2_mold))*100).toFixed(2)+'%' : '—';
+
+  tbody.innerHTML = paged.map((r, i) => {
+    const rej1 = parseFloat(r.output_ace1_mold) > 0
+      ? ((parseFloat(r.reject_ace1_pcs)/parseFloat(r.output_ace1_mold))*100).toFixed(2)+'%' : '—';
+    const rej2 = parseFloat(r.output_ace2_mold) > 0
+      ? ((parseFloat(r.reject_ace2_pcs)/parseFloat(r.output_ace2_mold))*100).toFixed(2)+'%' : '—';
     const safe = parseInt(r.safety_incident) > 0;
-    return `
-    <tr style="border-bottom:1px solid #f3f4f6;background:${i%2===0?'#FAFAFA':'white'}">
-      <td style="padding:8px 12px;white-space:nowrap">${r.date||'—'}</td>
-      <td style="padding:8px 12px">${r.shift||'—'}</td>
+    return `<tr style="border-bottom:1px solid #f3f4f6;background:${i%2===0?'#FAFAFA':'white'}">
+      <td style="padding:8px 12px;white-space:nowrap">${escapeHtml(r.date)||'—'}</td>
+      <td style="padding:8px 12px">${escapeHtml(r.shift)||'—'}</td>
       <td style="padding:8px 12px;text-align:right;font-family:monospace">${parseFloat(r.ace1_moldh)?.toFixed(1)||'—'}</td>
       <td style="padding:8px 12px;text-align:right;font-family:monospace">${parseFloat(r.ace2_moldh)?.toFixed(1)||'—'}</td>
       <td style="padding:8px 12px;text-align:right;font-family:monospace">${rej1}</td>
       <td style="padding:8px 12px;text-align:right;font-family:monospace">${rej2}</td>
-      <td style="padding:8px 12px;text-align:center"><span style="${safe?'background:#FDECEA;color:#C62828;border-radius:4px;padding:1px 6px':'color:#1B5E20'}">${safe?'⚠️ Ya':'✓'}</span></td>
-      <td style="padding:8px 12px;color:#6b7280">${r.submitted_by||'—'}</td>
+      <td style="padding:8px 12px;text-align:center">
+        <span style="${safe?'background:#FDECEA;color:#C62828;border-radius:4px;padding:1px 6px':'color:#1B5E20'}">${safe?'⚠️ Ya':'✓'}</span>
+      </td>
+      <td style="padding:8px 12px;color:#6b7280">${escapeHtml(r.submitted_by)||'—'}</td>
     </tr>`;
   }).join('');
 }
 
 function downloadCSV() {
-  if (!historyData.length) { showToast('Tidak ada data','error'); return; }
-  const headers = Object.keys(historyData[0]).join(',');
-  const csv = [headers, ...historyData.map(r => Object.values(r).map(v=>`"${v}"`).join(','))].join('\n');
+  const data = filteredData.length ? filteredData : historyData;
+  if (!data.length) { showToast('Tidak ada data untuk didownload','error'); return; }
+  const headers = Object.keys(data[0]).join(',');
+  const csv = [headers, ...data.map(r => Object.values(r).map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n');
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download = `daily_input_${new Date().toISOString().split('T')[0]}.csv`;
+  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv,{type:'text/csv;charset=utf-8'}]));
+  a.download = `kpi_daily_${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
   showToast('CSV berhasil didownload','success');
 }
 
 // ── Form Logic ─────────────────────────────────────────────
+const DRAFT_KEY = 'kpi_form_draft';
+
 document.getElementById('f-date').valueAsDate = new Date();
+
+// Load draft if exists
+(function loadDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY));
+    if (!d || !d.date) return;
+    const banner = document.getElementById('draft-banner');
+    banner.style.display = 'flex';
+    // Restore values
+    Object.entries(d).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el && el.type !== 'radio') el.value = val;
+    });
+    if (d['safety'] === '1') {
+      document.getElementById('safety-yes').checked = true;
+      toggleSafety(true);
+    }
+    calcLine('ace1'); calcLine('ace2');
+  } catch(e) {}
+})();
+
+function saveDraft() {
+  // Note: operator_code (OPERATOR_SECRET) tidak disimpan ke draft
+  // untuk menghindari exposure di komputer yang dipakai bersama
+  const fields = ['f-date','f-shift','f-operator',
+    'f-ace1-moldh','f-ace1-output','f-ace1-bdt','f-ace1-pw','f-ace1-mold','f-ace1-other','f-ace1-reject',
+    'f-ace2-moldh','f-ace2-output','f-ace2-bdt','f-ace2-pw','f-ace2-mold','f-ace2-other','f-ace2-reject',
+    'f-finishing','f-core','f-furnace','f-nonfurnace','f-notes'];
+  const d = {};
+  fields.forEach(id => { const el = document.getElementById(id); if (el) d[id] = el.value; });
+  d['safety'] = document.querySelector('input[name=safety]:checked')?.value || '0';
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); } catch(e) {}
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  document.getElementById('draft-banner').style.display = 'none';
+  showToast('Draft dihapus','info');
+}
+
+// Auto-save draft every 20 seconds
+setInterval(saveDraft, 20000);
 
 function calcLine(prefix) {
   const g = id => parseFloat(document.getElementById(id).value)||0;
-  const bdt=g(`f-${prefix}-bdt`), pw=g(`f-${prefix}-pw`),
-        ml=g(`f-${prefix}-mold`), ot=g(`f-${prefix}-other`);
-  const prod = 100-bdt-pw-ml-ot;
+  const bdt=g(`f-${prefix}-bdt`), pw=g(`f-${prefix}-pw`), ml=g(`f-${prefix}-mold`), ot=g(`f-${prefix}-other`);
+  const prod = 100 - bdt - pw - ml - ot;
   const span = document.getElementById(`${prefix}-prod-calc`);
   span.textContent = prod.toFixed(1)+'%';
   span.style.color = prod>=97?'#1B5E20':prod>=92?'#E65100':'#C62828';
-  const rej  = g(`f-${prefix}-reject`), out = g(`f-${prefix}-output`);
+  const rej=g(`f-${prefix}-reject`), out=g(`f-${prefix}-output`);
   document.getElementById(`f-${prefix}-reject-pct`).value = out>0?((rej/out)*100).toFixed(2)+'%':'—';
 }
 
@@ -506,9 +821,7 @@ function calcLine(prefix) {
   document.getElementById(`f-ace2-${s}`).addEventListener('input', ()=>calcLine('ace2'));
 });
 
-function toggleSafety(show) {
-  document.getElementById('safety-detail').classList.toggle('hidden',!show);
-}
+function toggleSafety(show) { document.getElementById('safety-detail').classList.toggle('hidden',!show); }
 
 const val = id => document.getElementById(id).value.trim();
 const num = id => parseFloat(document.getElementById(id).value)||0;
@@ -520,13 +833,13 @@ function previewForm() {
   const safe = document.querySelector('input[name=safety]:checked').value==='1';
   const prev = document.getElementById('form-preview');
   prev.innerHTML = `
-    <strong>Preview Submission:</strong><br>
+    <strong>Preview — akan disubmit:</strong><br>
     📅 ${val('f-date')} | ${val('f-shift')} | ${val('f-operator')||'(tanpa nama)'}<br>
-    🔵 ACE-1: ${num('f-ace1-moldh')} Mold/H | Prod: ${(100-b1-p1-m1-o1).toFixed(1)}% | Reject: ${num('f-ace1-reject')} pcs<br>
-    🟠 ACE-2: ${num('f-ace2-moldh')} Mold/H | Prod: ${(100-b2-p2-m2-o2).toFixed(1)}% | Reject: ${num('f-ace2-reject')} pcs<br>
+    🔵 ACE-1: ${num('f-ace1-moldh')} Mold/H | Prod: ${(100-b1-p1-m1-o1).toFixed(1)}% | Output: ${num('f-ace1-output')} mold | Reject: ${num('f-ace1-reject')} pcs<br>
+    🟠 ACE-2: ${num('f-ace2-moldh')} Mold/H | Prod: ${(100-b2-p2-m2-o2).toFixed(1)}% | Output: ${num('f-ace2-output')} mold | Reject: ${num('f-ace2-reject')} pcs<br>
     🟢 Finishing: ${num('f-finishing')}% | Core: ${num('f-core')}%<br>
-    ⚡ Furnace: ${num('f-furnace')} kWH | Non-Furn: ${num('f-nonfurnace')} kWH<br>
-    🛡️ Safety: ${safe?'⚠️ ADA INSIDEN':'✓ Aman'}`;
+    ⚡ Furnace: ${num('f-furnace')} kWH | Non-Furnace: ${num('f-nonfurnace')} kWH<br>
+    🛡️ Safety: ${safe?'⚠️ ADA INSIDEN — '+val('f-safety-type'):'✓ Tidak ada insiden'}`;
   prev.classList.remove('hidden');
   prev.scrollIntoView({behavior:'smooth',block:'center'});
 }
@@ -535,13 +848,16 @@ async function handleSubmit(e) {
   e.preventDefault();
   const errEl = document.getElementById('form-error-msg');
   errEl.classList.add('hidden');
-  if (!val('f-date'))  { showToast('Tanggal wajib diisi','error'); return; }
-  if (!val('f-shift')) { showToast('Shift wajib dipilih','error'); return; }
+  if (!val('f-date'))  return showToast('Tanggal wajib diisi','error');
+  if (!val('f-shift')) return showToast('Shift wajib dipilih','error');
+
   const btn = document.getElementById('submit-btn');
-  btn.disabled=true; btn.textContent='⏳ Mengirim...';
+  btn.disabled=true; btn.textContent='⏳ Mengirim data...'; btn.style.opacity='.7';
+
   const b1=num('f-ace1-bdt'),p1=num('f-ace1-pw'),m1=num('f-ace1-mold'),o1=num('f-ace1-other');
   const b2=num('f-ace2-bdt'),p2=num('f-ace2-pw'),m2=num('f-ace2-mold'),o2=num('f-ace2-other');
   const hasSafe = document.querySelector('input[name=safety]:checked').value==='1';
+
   try {
     const result = await submitData('DAILY_INPUT', {
       date:val('f-date'), shift:val('f-shift'), submitted_by:val('f-operator'),
@@ -552,22 +868,31 @@ async function handleSubmit(e) {
       reject_ace1_pcs:num('f-ace1-reject'), reject_ace2_pcs:num('f-ace2-reject'),
       output_ace1_mold:num('f-ace1-output'), output_ace2_mold:num('f-ace2-output'),
       finishing_prod_pct:num('f-finishing')/100, core_prod_pct:num('f-core')/100,
-      safety_incident:hasSafe?1:0, safety_type:hasSafe?val('f-safety-type'):'', safety_desc:hasSafe?val('f-safety-desc'):'',
+      safety_incident:hasSafe?1:0, safety_type:hasSafe?val('f-safety-type'):'',
+      safety_desc:hasSafe?val('f-safety-desc'):'',
       elec_furnace_kwh:num('f-furnace'), elec_nonfurnace_kwh:num('f-nonfurnace'),
       notes:val('f-notes'),
     });
-    showToast('✓ Data tersimpan! ID: '+result.id,'success',5000);
+
+    showToast('✓ Data berhasil tersimpan! ID: '+result.id,'success',5000);
+    clearDraft();
     document.getElementById('daily-form').reset();
     document.getElementById('f-date').valueAsDate = new Date();
     document.getElementById('form-preview').classList.add('hidden');
     document.getElementById('ace1-prod-calc').textContent='—';
     document.getElementById('ace2-prod-calc').textContent='—';
+    document.querySelector('input[name=safety][value="0"]').checked = true;
+    document.getElementById('safety-detail').classList.add('hidden');
     _dailyRows = null;
   } catch(err) {
-    errEl.textContent = '❌ '+err.message; errEl.classList.remove('hidden');
-    showToast('Gagal menyimpan','error');
+    errEl.textContent = '❌ Gagal submit: '+err.message;
+    errEl.classList.remove('hidden');
+    showToast('Gagal menyimpan data','error');
+    // Save as draft automatically on failure
+    saveDraft();
+    showToast('Data disimpan sebagai draft lokal','info',4000);
   } finally {
-    btn.disabled=false; btn.textContent='✓ Submit Data';
+    btn.disabled=false; btn.textContent='✓ Submit Data'; btn.style.opacity='1';
   }
 }
 
@@ -576,13 +901,14 @@ async function manualRefresh() {
   const icon = document.getElementById('refresh-icon');
   icon.style.animation='spin 0.8s linear infinite';
   clearCache(); _dailyRows=null; _monthlyRows=null; _rejRows=null;
-  if (currentView==='dashboard') await loadDashboard();
-  if (currentView==='history')   await loadHistory();
-  setTimeout(()=>{ icon.style.animation=''; }, 500);
+  try {
+    if (currentView==='dashboard') await loadDashboard();
+    if (currentView==='history')   await loadHistory();
+  } finally { setTimeout(()=>{ icon.style.animation=''; }, 400); }
 }
 
 // ── Init ───────────────────────────────────────────────────
-document.getElementById('header-company').textContent = CONFIG.COMPANY_NAME + ' — KPI';
+document.getElementById('header-company').textContent = CONFIG.COMPANY_NAME;
 loadDashboard();
 if (CONFIG.AUTO_REFRESH_MINUTES > 0) {
   setInterval(manualRefresh, CONFIG.AUTO_REFRESH_MINUTES * 60 * 1000);

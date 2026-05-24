@@ -231,3 +231,82 @@
   .kpi-card { break-inside: avoid; }
   .app-header { position: static; box-shadow: none; }
 }
+
+/* ── Offline indicator ─────────────────────────────── */
+.offline-bar {
+  position: fixed; top: 52px; left: 0; right: 0; z-index: 99;
+  background: #C62828; color: white;
+  text-align: center; font-size: 12px; font-weight: 500;
+  padding: 6px; display: none;
+}
+body.offline .offline-bar { display: block; }
+
+/* ── History filter bar ────────────────────────────── */
+.filter-bar {
+  background: white; border-radius: var(--border-radius-lg);
+  border: 1px solid #e5e7eb; padding: 12px 14px;
+  margin-bottom: 12px; display: flex; gap: 10px;
+  flex-wrap: wrap; align-items: flex-end;
+}
+.filter-group { display: flex; flex-direction: column; gap: 3px; }
+.filter-label { font-size: 10px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+.filter-input { padding: 7px 10px; border: 1.5px solid #d1d5db; border-radius: 7px; font-size: 12px; background: white; color: #111827; }
+.filter-input:focus { outline: none; border-color: var(--navy); }
+.filter-btn { padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; }
+.filter-btn.apply { background: var(--navy); color: white; }
+.filter-btn.reset { background: #f3f4f6; color: #374151; }
+
+/* ── Print styles ──────────────────────────────────── */
+@media print {
+  body { background: white !important; }
+  .app-header, .tab-nav, .period-bar,
+  #dash-empty-banner, #completeness-badge,
+  .chart-grid, #chart-pareto, #alert-section,
+  #view-input, #view-history, .offline-bar,
+  button, .period-btn { display: none !important; }
+
+  .view { padding: 0 !important; }
+  #view-dashboard { display: block !important; }
+  #dash-content { display: block !important; }
+
+  .print-header { display: block !important; }
+  .print-scorecard-table { display: table !important; }
+  .kpi-grid { display: none !important; }
+
+  @page {
+    size: A4 landscape;
+    margin: 1.2cm 1.5cm;
+  }
+}
+
+/* Hidden on screen, visible on print */
+.print-header { display: none; }
+.print-scorecard-table { display: none; }
+
+/* Print header layout */
+.print-header {
+  display: none;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #1B2A4A;
+  padding-bottom: 10px;
+}
+.print-scorecard-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 11px;
+}
+.print-scorecard-table th {
+  background: #1B2A4A; color: white;
+  padding: 6px 10px; text-align: left;
+  font-weight: 500;
+}
+.print-scorecard-table td {
+  padding: 5px 10px;
+  border-bottom: .5px solid #e5e7eb;
+}
+.print-scorecard-table tr:nth-child(even) td { background: #f9fafb; }
+.print-sig { display: flex; gap: 40px; margin-top: 24px; }
+.print-sig-box { flex: 1; border-top: 1px solid #374151; padding-top: 4px; font-size: 10px; color: #6b7280; }
+
+/* Smooth tab transition */
+.view { animation: fadeIn .15s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }

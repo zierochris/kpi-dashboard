@@ -87,7 +87,7 @@ function renderProdChart(data) {
       formatter: p => p.map(s => `${s.marker}${s.seriesName}: <b>${s.value !== null ? (s.value*100).toFixed(1)+'%' : '—'}</b>`).join('<br>')
     },
     xAxis: { type:'category', data:data.dates, axisLabel:{ ...AXIS_LBL, rotate: data.dates.length > 14 ? 30 : 0 } },
-    yAxis: { type:'value', min:0.80, max:1.02, axisLabel:{ ...AXIS_LBL, formatter: v=>(v*100).toFixed(0)+'%' } },
+    yAxis: { type:'value', min:_cc.prod_min||0.80, max:1.02, axisLabel:{ ...AXIS_LBL, formatter: v=>(v*100).toFixed(0)+'%' } },
     series: [
       { name:'ACE-1 Prod%', type:'bar', data:data.prod1, barWidth:'35%', barGap:'10%',
         itemStyle:{ color:C.ace1, borderRadius:[3,3,0,0] } },

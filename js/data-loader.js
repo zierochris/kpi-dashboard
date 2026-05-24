@@ -1,3 +1,14 @@
+// ── XSS Prevention — sanitize user-input strings ──────────
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 // ============================================================
 // data-loader.js — Fetch & parse data dari Google Sheets
 // Phase 5.3: tambah getRejectionDetail, improved error handling
@@ -72,8 +83,32 @@ async function fetchSheet(sheetName, useCache = true) {
 
 // ── Public API ─────────────────────────────────────────────
 
-async function getDailyInputs() {
-  return await fetchSheet('DAILY_INPUT');
+// dashboardDays: fetch hanya N hari untuk dashboard (cepat)
+// fullFetch: fetch semua untuk export CSV (lengkap)
+async function getDailyInputs({ days = 180, full = false } = {}) {
+  if (full) return await fetchSheet('DAILY_INPUT_FULL', false);
+
+  // Untuk dashboard: ambil semua lalu filter client-side (gviz tidak support TQL date filter)
+  // Cache key berbeda untuk full vs dashboard
+  const key = `gsheet_DAILY_INPUT_${days}`;
+  const cached = cacheGet(key);
+  if (cached) return cached;
+
+  const all = await fetchSheet('DAILY_INPUT', false); // no nested cache
+  // Ambil N hari terakhir untuk performa dashboard
+  if (!full && days > 0) {
+    const cutoff = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+    const filtered = all.filter(r => !r.date || String(r.date) >= cutoff);
+    cacheSet(key, filtered);
+    return filtered;
+  }
+  cacheSet(key, all);
+  return all;
+}
+
+// Untuk export CSV — ambil semua data tanpa limit
+async function getAllDailyInputs() {
+  return await fetchSheet('DAILY_INPUT', false); // bypass cache untuk export
 }
 
 async function getMonthlySummary() {
