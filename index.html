@@ -87,40 +87,40 @@
 
 <!-- ════════════════════ VIEW: DASHBOARD ════════════════════ -->
 <div id="view-dashboard" class="view p-3 max-w-7xl mx-auto">
-  <div class="flex items-center gap-2 mb-3 overflow-x-auto pb-1 flex-wrap">
+  <div class="flex items-center gap-2 mb-1 overflow-x-auto pb-1 flex-wrap">
     <span style="font-size:12px;color:#6b7280;white-space:nowrap;flex-shrink:0">Periode:</span>
-    <!-- Baris 1: period utama -->
     <button class="period-btn active" onclick="setPeriod('today',this)">Hari Ini</button>
     <button class="period-btn" onclick="setPeriod('week',this)">7 Hari</button>
     <button class="period-btn" onclick="setPeriod('month',this)">Bulan Ini</button>
     <button class="period-btn" onclick="setPeriod('ytd',this)">YTD FY26</button>
-    <!-- Toggle quarterly -->
-    <button id="toggle-more-periods" onclick="toggleMorePeriods()"
-      style="padding:5px 10px;border-radius:20px;font-size:12px;border:1.5px dashed #d1d5db;background:transparent;color:#6b7280;cursor:pointer;white-space:nowrap">
-      Q1–Q4 ▼
-    </button>
-    <!-- Custom date range -->
-    <button onclick="openCustomModal()"
-      style="padding:5px 10px;border-radius:20px;font-size:12px;border:1.5px dashed #d1d5db;background:transparent;color:#6b7280;cursor:pointer;white-space:nowrap">
-      📅 Custom
-    </button>
+    <!-- Tombol Lainnya — hidden Q1/Q4 & Custom di balik satu tombol -->
+    <div style="position:relative">
+      <button id="btn-more-periods" onclick="toggleMorePeriods()"
+        style="padding:5px 12px;border-radius:20px;font-size:12px;border:1.5px solid #e5e7eb;background:white;color:#6b7280;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px">
+        <span>⋯</span> <span id="more-label">Lainnya</span>
+      </button>
+      <!-- Dropdown panel -->
+      <div id="more-periods-panel" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:white;border:1px solid #e5e7eb;border-radius:12px;padding:10px;min-width:220px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:150">
+        <div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Quarter FY26</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="period-btn" id="btn-q1" onclick="setPeriodExtra('q1',this)">Q1 Apr–Jun</button>
+          <button class="period-btn" id="btn-q2" onclick="setPeriodExtra('q2',this)">Q2 Jul–Sep</button>
+          <button class="period-btn" id="btn-q3" onclick="setPeriodExtra('q3',this)">Q3 Oct–Dec</button>
+          <button class="period-btn" id="btn-q4" onclick="setPeriodExtra('q4',this)">Q4 Jan–Mar</button>
+        </div>
+        <div style="border-top:1px solid #f3f4f6;padding-top:8px">
+          <button onclick="openCustomModal()"
+            style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px dashed #d1d5db;background:#f9fafb;color:#374151;font-size:12px;cursor:pointer;text-align:left">
+            📅 Custom Date Range...
+          </button>
+        </div>
+      </div>
+    </div>
     <div id="completeness-badge" style="display:none;margin-left:auto;font-size:11px;padding:3px 10px;border-radius:20px;background:#E6F1FB;color:#0C447C;white-space:nowrap;flex-shrink:0"></div>
   </div>
 
-  <!-- Baris 2: Quarterly buttons (hidden by default) -->
-  <div id="quarterly-row" style="display:none;margin-bottom:10px;display:none">
-    <div class="flex items-center gap-2 flex-wrap">
-      <span style="font-size:11px;color:#9ca3af;white-space:nowrap">Quarter FY:</span>
-      <button class="period-btn" id="btn-q1" onclick="setPeriod('q1',this)">Q1 Apr–Jun</button>
-      <button class="period-btn" id="btn-q2" onclick="setPeriod('q2',this)">Q2 Jul–Sep</button>
-      <button class="period-btn" id="btn-q3" onclick="setPeriod('q3',this)">Q3 Oct–Dec</button>
-      <button class="period-btn" id="btn-q4" onclick="setPeriod('q4',this)">Q4 Jan–Mar</button>
-      <span id="current-q-badge" style="font-size:10px;background:#E6F1FB;color:#0C447C;padding:2px 8px;border-radius:20px;display:none">← Sekarang</span>
-    </div>
-  </div>
-
   <!-- Custom Date Modal -->
-  <div id="custom-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;">
+  <div id="custom-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;align-items:center;justify-content:center;">
     <div style="background:white;border-radius:16px;padding:20px;width:min(90vw,360px);box-shadow:0 20px 60px rgba(0,0,0,0.2)">
       <div style="font-size:15px;font-weight:600;color:#1B2A4A;margin-bottom:16px">📅 Pilih Rentang Tanggal</div>
       <div style="display:grid;gap:12px">
@@ -435,26 +435,48 @@ function setPeriod(period, btn) {
   if (_dailyRows !== null) renderDashboard();
 }
 
-// ── Quarterly UI ───────────────────────────────────────────
-let _quarterRowVisible = false;
+// ── Dropdown "Lainnya" ─────────────────────────────────────
+let _moreOpen = false;
 
 function toggleMorePeriods() {
-  _quarterRowVisible = !_quarterRowVisible;
-  const row = document.getElementById('quarterly-row');
-  const btn = document.getElementById('toggle-more-periods');
-  row.style.display = _quarterRowVisible ? 'block' : 'none';
-  btn.textContent   = _quarterRowVisible ? 'Q1–Q4 ▲' : 'Q1–Q4 ▼';
-
-  // Highlight tombol quarter yang sedang aktif
-  if (_quarterRowVisible) {
-    const cq  = currentQuarter();
+  _moreOpen = !_moreOpen;
+  const panel = document.getElementById('more-periods-panel');
+  const label = document.getElementById('more-label');
+  panel.style.display = _moreOpen ? 'block' : 'none';
+  label.textContent   = _moreOpen ? 'Tutup' : 'Lainnya';
+  // Highlight quarter aktif saat dropdown dibuka
+  if (_moreOpen) {
+    const cq = currentQuarter();
+    document.querySelectorAll('#more-periods-panel .period-btn')
+      .forEach(b => b.style.outline = '');
     const cqb = document.getElementById(`btn-${cq}`);
-    const badge = document.getElementById('current-q-badge');
-    if (cqb && badge) {
-      badge.style.display = 'inline-block';
-      cqb.after(badge);
-    }
+    if (cqb) cqb.style.outline = '2px solid #C9A84C'; // gold = current quarter
   }
+}
+
+// Tutup dropdown saat klik di luar
+document.addEventListener('click', e => {
+  const panel = document.getElementById('more-periods-panel');
+  const btn   = document.getElementById('btn-more-periods');
+  if (_moreOpen && panel && !panel.contains(e.target) && !btn.contains(e.target)) {
+    _moreOpen = false;
+    panel.style.display = 'none';
+    document.getElementById('more-label').textContent = 'Lainnya';
+  }
+});
+
+// setPeriodExtra: dipanggil dari tombol Q1-Q4 di dalam dropdown
+function setPeriodExtra(period, btn) {
+  // Tutup dropdown
+  _moreOpen = false;
+  document.getElementById('more-periods-panel').style.display = 'none';
+  document.getElementById('more-label').textContent = 'Lainnya';
+  // Hilangkan active dari semua period-btn utama
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  // Tandai tombol "Lainnya" sebagai proxy active
+  document.getElementById('btn-more-periods').classList.add('active');
+  currentPeriod = period;
+  if (_dailyRows !== null) renderDashboard();
 }
 
 // ── Custom Date Range ──────────────────────────────────────
