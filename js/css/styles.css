@@ -1,0 +1,312 @@
+/* KPI Dashboard — Custom Styles */
+/* Tailwind sudah handle sebagian besar styling */
+/* File ini untuk override dan komponen spesifik */
+
+:root {
+  --navy:    #1B2A4A;
+  --charcoal:#3D3D3D;
+  --gold:    #C9A84C;
+  --green:   #1B5E20;
+  --amber:   #E65100;
+  --red:     #C62828;
+}
+
+/* Scrollbar tipis */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+
+/* Header utama */
+.app-header {
+  background: var(--navy);
+  color: white;
+  padding: 0 1rem;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Tab navigation */
+.tab-nav {
+  display: flex;
+  background: white;
+  border-bottom: 2px solid #e5e7eb;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab-btn:hover { color: var(--navy); }
+.tab-btn.active {
+  color: var(--navy);
+  border-bottom-color: var(--navy);
+}
+
+/* KPI Card */
+.kpi-card {
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 14px 16px;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.kpi-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+.kpi-cat  { font-size: 10px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.08em; }
+.kpi-name { font-size: 12px; color: #374151; margin: 2px 0 8px; }
+.kpi-val  { font-size: 22px; font-weight: 600; line-height: 1; }
+.kpi-tgt  { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+.kpi-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-top: 6px;
+}
+
+/* Status warna */
+.rag-green  { background: #E8F5E9; color: #1B5E20; }
+.rag-amber  { background: #FFF8E1; color: #E65100; }
+.rag-red    { background: #FDECEA; color: #C62828; }
+.rag-nodata { background: #F5F5F5; color: #9E9E9E; }
+
+.val-green  { color: #1B5E20; }
+.val-amber  { color: #E65100; }
+.val-red    { color: #C62828; }
+.val-nodata { color: #9E9E9E; }
+
+/* Chart container */
+.chart-box {
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+}
+.chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Form input */
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 4px;
+}
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.15s;
+  background: white;
+  color: #111827;
+  -webkit-appearance: none;
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.1);
+}
+.form-input.error { border-color: var(--red); }
+.form-error { font-size: 11px; color: var(--red); margin-top: 3px; }
+
+/* Section header di form */
+.section-head {
+  background: var(--navy);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  margin: 16px 0 12px;
+  letter-spacing: 0.04em;
+}
+
+/* Loading spinner */
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: var(--navy);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Alert item */
+.alert-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #FDECEA;
+  border-left: 3px solid #C62828;
+  margin-bottom: 8px;
+}
+.alert-item.amber {
+  background: #FFF8E1;
+  border-left-color: #E65100;
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  max-width: 320px;
+  text-align: center;
+}
+.toast.show    { opacity: 1; }
+.toast.success { background: #1B5E20; }
+.toast.error   { background: #C62828; }
+.toast.info    { background: var(--navy); }
+
+/* Period selector */
+.period-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1.5px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.period-btn.active {
+  background: var(--navy);
+  color: white;
+  border-color: var(--navy);
+}
+
+/* Mobile: full width grid */
+@media (max-width: 640px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+  .chart-grid { grid-template-columns: 1fr !important; }
+  .app-header { padding: 0 0.75rem; }
+  .tab-btn { padding: 10px 14px; font-size: 12px; }
+}
+
+/* Print styles untuk BOD */
+@media print {
+  .tab-nav, .period-bar, .submit-btn { display: none !important; }
+  .kpi-card { break-inside: avoid; }
+  .app-header { position: static; box-shadow: none; }
+}
+
+/* ── Offline indicator ─────────────────────────────── */
+.offline-bar {
+  position: fixed; top: 52px; left: 0; right: 0; z-index: 99;
+  background: #C62828; color: white;
+  text-align: center; font-size: 12px; font-weight: 500;
+  padding: 6px; display: none;
+}
+body.offline .offline-bar { display: block; }
+
+/* ── History filter bar ────────────────────────────── */
+.filter-bar {
+  background: white; border-radius: var(--border-radius-lg);
+  border: 1px solid #e5e7eb; padding: 12px 14px;
+  margin-bottom: 12px; display: flex; gap: 10px;
+  flex-wrap: wrap; align-items: flex-end;
+}
+.filter-group { display: flex; flex-direction: column; gap: 3px; }
+.filter-label { font-size: 10px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+.filter-input { padding: 7px 10px; border: 1.5px solid #d1d5db; border-radius: 7px; font-size: 12px; background: white; color: #111827; }
+.filter-input:focus { outline: none; border-color: var(--navy); }
+.filter-btn { padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; }
+.filter-btn.apply { background: var(--navy); color: white; }
+.filter-btn.reset { background: #f3f4f6; color: #374151; }
+
+/* ── Print styles ──────────────────────────────────── */
+@media print {
+  body { background: white !important; }
+  .app-header, .tab-nav, .period-bar,
+  #dash-empty-banner, #completeness-badge,
+  .chart-grid, #chart-pareto, #alert-section,
+  #view-input, #view-history, .offline-bar,
+  button, .period-btn { display: none !important; }
+
+  .view { padding: 0 !important; }
+  #view-dashboard { display: block !important; }
+  #dash-content { display: block !important; }
+
+  .print-header { display: block !important; }
+  .print-scorecard-table { display: table !important; }
+  .kpi-grid { display: none !important; }
+
+  @page {
+    size: A4 landscape;
+    margin: 1.2cm 1.5cm;
+  }
+}
+
+/* Hidden on screen, visible on print */
+.print-header { display: none; }
+.print-scorecard-table { display: none; }
+
+/* Print header layout */
+.print-header {
+  display: none;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #1B2A4A;
+  padding-bottom: 10px;
+}
+.print-scorecard-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 11px;
+}
+.print-scorecard-table th {
+  background: #1B2A4A; color: white;
+  padding: 6px 10px; text-align: left;
+  font-weight: 500;
+}
+.print-scorecard-table td {
+  padding: 5px 10px;
+  border-bottom: .5px solid #e5e7eb;
+}
+.print-scorecard-table tr:nth-child(even) td { background: #f9fafb; }
+.print-sig { display: flex; gap: 40px; margin-top: 24px; }
+.print-sig-box { flex: 1; border-top: 1px solid #374151; padding-top: 4px; font-size: 10px; color: #6b7280; }
+
+/* Smooth tab transition */
+.view { animation: fadeIn .15s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
