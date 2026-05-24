@@ -6,6 +6,32 @@
 // Baca chart config dari config.js (fallback ke default jika CHART_CONFIG belum ada)
 const _cc = (typeof CHART_CONFIG !== 'undefined') ? CHART_CONFIG : {};
 
+// ── Mobile detection & responsive helpers ──────────────────
+function isMobile() { return window.innerWidth <= 640; }
+
+function responsiveGrid() {
+  return isMobile()
+    ? { top:28, right:10, bottom:28, left:42 }
+    : { top:36, right:16, bottom:36, left:52 };
+}
+
+function responsiveLegend() {
+  return isMobile()
+    ? { orient:'vertical', right:0, top:'middle', textStyle:{ fontSize:9 }, itemWidth:10, itemHeight:6 }
+    : { bottom:2, textStyle:{ fontSize:11 }, itemWidth:12, itemHeight:8 };
+}
+
+function responsiveAxisLabel(extraRotate) {
+  const mobile = isMobile();
+  return { fontSize: mobile ? 8 : 10, color:'#9ca3af',
+           rotate: mobile ? (extraRotate || 0) : (extraRotate || 0) };
+}
+
+// Limit data points di mobile agar chart tidak crowded
+function responsiveLimit(data, desktopLimit) {
+  return isMobile() ? data.slice(-14) : data.slice(-desktopLimit);
+}
+
 let _charts = {};
 
 function initChart(id, option) {
@@ -21,14 +47,15 @@ function resizeAllCharts() {
 }
 window.addEventListener('resize', resizeAllCharts);
 
-// Shared style constants
-const GRID   = { top:36, right:16, bottom:36, left:52 };
-const LEGEND = { bottom:2, textStyle:{ fontSize:11 }, itemWidth:12, itemHeight:8 };
+// Shared style constants (non-responsive — dipakai di chart yang tidak berubah)
+const AXIS_LBL    = { fontSize:10, color:'#9ca3af' };
 const TOOLTIP_AXIS = { trigger:'axis', backgroundColor:'rgba(27,42,74,0.9)', textStyle:{ color:'#fff', fontSize:11 }, borderWidth:0 };
-const AXIS_LBL = { fontSize:10, color:'#9ca3af' };
 const LINE_TARGET = { color:'#C62828', width:1.5, type:'dashed' };
-
 const C = { ace1:'#4472C4', ace2:'#ED7D31', target:'#C62828', purple:'#7030A0', green:'#70AD47', gold:'#C9A84C' };
+
+// Responsive versions: computed fresh per chart call
+const GRID   = () => responsiveGrid();
+const LEGEND = () => responsiveLegend();
 
 function emptyChart(id, msg = 'Belum ada data untuk periode ini') {
   initChart(id, {
@@ -42,13 +69,21 @@ function emptyChart(id, msg = 'Belum ada data untuk periode ini') {
 // ── Chart 1: Mold/H Trend ───────────────────────────────────
 function renderMoldhChart(data, prev) {
   if (!data.dates || data.dates.length === 0) { emptyChart('chart-moldh'); return; }
+  // Limit to 14 points on mobile
+  const limit   = isMobile() ? 14 : 30;
+  const dates   = data.dates.slice(-limit);
+  const _d      = { ...data, dates,
+    ace1: data.ace1.slice(-limit), ace2: data.ace2.slice(-limit),
+    prod1: data.prod1.slice(-limit), prod2: data.prod2.slice(-limit),
+    reject1: data.reject1.slice(-limit), reject2: data.reject2.slice(-limit),
+  };
   const hp = prev && prev.dates && prev.dates.length > 0;
   const series = [
     { name: hp?'ACE-1 (saat ini)':'ACE-1', type:'line', data:data.ace1, smooth:true,
       lineStyle:{color:C.ace1,width:2.5}, itemStyle:{color:C.ace1}, symbol:'circle', symbolSize:4 },
-    { name: hp?'ACE-2 (saat ini)':'ACE-2', type:'line', data:data.ace2, smooth:true,
+    { name: hp?'ACE-2 (saat ini)':'ACE-2', type:'line', data:_d.ace2, smooth:true,
       lineStyle:{color:C.ace2,width:2.5}, itemStyle:{color:C.ace2}, symbol:'circle', symbolSize:4 },
-    { name:'Target', type:'line', data:data.dates.map(()=>data.target_moldh),
+    { name:'Target', type:'line', data:_d.dates.map(()=>data.target_moldh),
       lineStyle:LINE_TARGET, symbol:'none', itemStyle:{color:C.target} },
   ];
   if (hp) {
@@ -58,10 +93,10 @@ function renderMoldhChart(data, prev) {
       lineStyle:{color:C.ace2,width:1.5,type:'dashed'}, opacity:0.55, symbol:'none', itemStyle:{color:C.ace2,opacity:0.55} });
   }
   initChart('chart-moldh', {
-    grid:GRID, legend:LEGEND,
+    grid:GRID(), legend:LEGEND(),
     tooltip:{...TOOLTIP_AXIS, formatter:p=>p.map(s=>`${s.marker}${s.seriesName}: <b>${s.value!==null?s.value.toFixed(1):'—'}</b>`).join('<br>')},
-    xAxis:{type:'category',data:data.dates,axisLabel:{...AXIS_LBL,rotate:data.dates.length>14?30:0}},
-    yAxis:{type:'value',min:_cc.moldh_min||110,max:_cc.moldh_max||165,axisLabel:{...AXIS_LBL,formatter:'{value}'}},
+    xAxis:{type:'category',data:_d.dates,axisLabel:{fontSize:isMobile()?8:10,color:'#9ca3af',rotate:_d.dates.length>14?30:0}},
+    yAxis:{type:'value',min:_cc.moldh_min||110,max:_cc.moldh_max||165,axisLabel:{fontSize:isMobile()?8:10,color:'#9ca3af',formatter:'{value}'}},
     series,
   });
 }
@@ -85,7 +120,7 @@ function renderRejectChart(data, prev) {
       lineStyle:{color:C.ace2,width:1.5,type:'dashed'}, symbol:'none', itemStyle:{color:C.ace2,opacity:0.55} });
   }
   initChart('chart-reject', {
-    grid:GRID, legend:LEGEND,
+    grid:GRID(), legend:LEGEND(),
     tooltip:{...TOOLTIP_AXIS, formatter:p=>p.map(s=>`${s.marker}${s.seriesName}: <b>${s.value!==null?(s.value*100).toFixed(2)+'%':'—'}</b>`).join('<br>')},
     xAxis:{type:'category',data:data.dates,axisLabel:{...AXIS_LBL,rotate:data.dates.length>14?30:0}},
     yAxis:{type:'value',min:0,axisLabel:{...AXIS_LBL,formatter:v=>(v*100).toFixed(1)+'%'}},
@@ -112,7 +147,7 @@ function renderProdChart(data, prev) {
       lineStyle:{color:C.ace2,width:1.5,type:'dashed'}, symbol:'none', itemStyle:{color:C.ace2,opacity:0.55} });
   }
   initChart('chart-prod', {
-    grid:GRID, legend:LEGEND,
+    grid:GRID(), legend:LEGEND(),
     tooltip:{...TOOLTIP_AXIS, formatter:p=>p.map(s=>`${s.marker}${s.seriesName}: <b>${s.value!==null?(s.value*100).toFixed(1)+'%':'—'}</b>`).join('<br>')},
     xAxis:{type:'category',data:data.dates,axisLabel:{...AXIS_LBL,rotate:data.dates.length>14?30:0}},
     yAxis:{type:'value',min:_cc.prod_min||0.80,max:1.02,axisLabel:{...AXIS_LBL,formatter:v=>(v*100).toFixed(0)+'%'}},
@@ -133,7 +168,7 @@ function renderEnergyChart(data) {
   }
 
   initChart('chart-energy', {
-    grid: GRID, legend: LEGEND, tooltip: {
+    grid:GRID(), legend:LEGEND(), tooltip: {
       ...TOOLTIP_AXIS,
       formatter: p => p.map(s => `${s.marker}${s.seriesName}: <b>${s.value !== null ? s.value.toLocaleString()+' kWH' : '—'}</b>`).join('<br>')
     },

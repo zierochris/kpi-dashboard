@@ -310,3 +310,90 @@ body.offline .offline-bar { display: block; }
 /* Smooth tab transition */
 .view { animation: fadeIn .15s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Bottom Navigation Bar (mobile only ≤640px) ─────────── */
+.bottom-nav {
+  display: none; /* hidden on desktop */
+}
+
+@media (max-width: 640px) {
+  /* Sembunyikan top tab nav di mobile */
+  .tab-nav { display: none !important; }
+
+  /* Tampilkan bottom nav */
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 56px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    z-index: 100;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+  }
+
+  /* Beri ruang agar konten tidak tertutup bottom nav */
+  .view { padding-bottom: 72px !important; }
+
+  /* Beri ruang untuk form submit sticky */
+  #view-input { padding-bottom: 120px !important; }
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 10px;
+  font-weight: 400;
+  transition: color 0.15s;
+  padding: 6px 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav-item.active {
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.bottom-nav-icon {
+  font-size: 20px;
+  line-height: 1;
+  transition: transform 0.15s;
+}
+
+.bottom-nav-item.active .bottom-nav-icon {
+  transform: translateY(-1px);
+}
+
+.bottom-nav-label {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+/* Sticky submit button di mobile */
+.sticky-submit-wrap {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .sticky-submit-wrap {
+    display: block;
+    position: fixed;
+    bottom: 56px; /* di atas bottom nav */
+    left: 0; right: 0;
+    padding: 10px 16px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    z-index: 99;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.1);
+  }
+  /* Sembunyikan submit button di dalam form (digantikan sticky) */
+  #submit-btn-inline { display: none; }
+}

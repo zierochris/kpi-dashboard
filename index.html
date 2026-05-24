@@ -41,11 +41,27 @@
   </div>
 </header>
 
-<!-- ── TAB NAVIGATION ── -->
+<!-- ── TOP TAB NAVIGATION (desktop) ── -->
 <nav class="tab-nav">
   <button class="tab-btn active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
   <button class="tab-btn" onclick="switchTab('input',this)">✏️ Input Harian</button>
   <button class="tab-btn" onclick="switchTab('history',this)">📋 Riwayat</button>
+</nav>
+
+<!-- ── BOTTOM NAVIGATION BAR (mobile only) ── -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bottom-nav-item active" id="bnav-dashboard" onclick="switchTabMobile('dashboard')">
+    <span class="bottom-nav-icon">📊</span>
+    <span class="bottom-nav-label">Dashboard</span>
+  </button>
+  <button class="bottom-nav-item" id="bnav-input" onclick="switchTabMobile('input')">
+    <span class="bottom-nav-icon">✏️</span>
+    <span class="bottom-nav-label">Input</span>
+  </button>
+  <button class="bottom-nav-item" id="bnav-history" onclick="switchTabMobile('history')">
+    <span class="bottom-nav-icon">📋</span>
+    <span class="bottom-nav-label">Riwayat</span>
+  </button>
 </nav>
 
 <!-- ════════════ PRINT HEADER (hidden on screen) ════════════ -->
@@ -226,21 +242,29 @@
     <div class="section-head">🔵 Produksi ACE-1</div>
     <div class="bg-white rounded-xl p-4 space-y-3">
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="form-label">Mold/Hour actual</label><input type="number" id="f-ace1-moldh" class="form-input" min="0" max="200" step="0.1" placeholder="148.5"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 148.5 Mold/H</div></div>
-        <div><label class="form-label">Output (Mold)</label><input type="number" id="f-ace1-output" class="form-input" min="0" step="1" placeholder="1180"></div>
+        <div><label class="form-label">Mold/Hour actual</label><input type="number" id="f-ace1-moldh" class="form-input" min="0" max="200" step="0.1" placeholder="148.5" inputmode="decimal"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 148.5 Mold/H</div></div>
+        <div><label class="form-label">Output (Mold)</label><input type="number" id="f-ace1-output" class="form-input" min="0" step="1" placeholder="1180" inputmode="decimal"></div>
       </div>
       <div>
-        <label class="form-label">Loss Time % <span style="color:#9ca3af;font-weight:400">(BDT | PourWait | Loss Mold | Other)</span></label>
-        <div class="grid grid-cols-4 gap-2">
-          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">BDT</div><input type="number" id="f-ace1-bdt" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
-          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">PW</div><input type="number" id="f-ace1-pw" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
-          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Mold</div><input type="number" id="f-ace1-mold" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
-          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Other</div><input type="number" id="f-ace1-other" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <label class="form-label" style="margin-bottom:0">Loss Time % <span style="color:#9ca3af;font-weight:400">(BDT | PW | Mold | Other)</span></label>
+          <button type="button" id="ace1-loss-toggle" onclick="toggleLoss('ace1')"
+            style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280;cursor:pointer;white-space:nowrap;margin-left:auto">
+            ▼ Lihat
+          </button>
+        </div>
+        <div id="ace1-loss-body" style="display:none">
+          <div class="grid grid-cols-4 gap-2">
+            <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">BDT</div><input type="number" id="f-ace1-bdt" class="form-input" min="0" max="100" step="0.1" placeholder="0" inputmode="decimal"></div>
+            <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">PW</div><input type="number" id="f-ace1-pw" class="form-input" min="0" max="100" step="0.1" placeholder="0" inputmode="decimal"></div>
+            <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Mold</div><input type="number" id="f-ace1-mold" class="form-input" min="0" max="100" step="0.1" placeholder="0" inputmode="decimal"></div>
+            <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Other</div><input type="number" id="f-ace1-other" class="form-input" min="0" max="100" step="0.1" placeholder="0" inputmode="decimal"></div>
+          </div>
         </div>
         <div style="font-size:12px;margin-top:5px">Prod%: <span id="ace1-prod-calc" style="font-weight:600;color:#1B2A4A">—</span></div>
       </div>
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="form-label">Reject (pcs)</label><input type="number" id="f-ace1-reject" class="form-input" min="0" step="1" placeholder="0"></div>
+        <div><label class="form-label">Reject (pcs)</label><input type="number" id="f-ace1-reject" class="form-input" min="0" step="1" placeholder="0" inputmode="decimal"></div>
         <div><label class="form-label">Reject % (auto)</label><input type="text" id="f-ace1-reject-pct" class="form-input" readonly style="background:#f9fafb" placeholder="—"></div>
       </div>
     </div>
@@ -248,30 +272,44 @@
     <div class="section-head">🟠 Produksi ACE-2</div>
     <div class="bg-white rounded-xl p-4 space-y-3">
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="form-label">Mold/Hour actual</label><input type="number" id="f-ace2-moldh" class="form-input" min="0" max="200" step="0.1" placeholder="148.5"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 148.5 Mold/H</div></div>
-        <div><label class="form-label">Output (Mold)</label><input type="number" id="f-ace2-output" class="form-input" min="0" step="1" placeholder="1180"></div>
+        <div><label class="form-label">Mold/Hour actual</label><input type="number" id="f-ace2-moldh" class="form-input" min="0" max="200" step="0.1" placeholder="148.5" inputmode="decimal"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 148.5 Mold/H</div></div>
+        <div><label class="form-label">Output (Mold)</label><input type="number" id="f-ace2-output" class="form-input" min="0" step="1" placeholder="1180" inputmode="decimal"></div>
       </div>
       <div>
-        <label class="form-label">Loss Time % <span style="color:#9ca3af;font-weight:400">(BDT | PW | Mold | Other)</span></label>
-        <div class="grid grid-cols-4 gap-2">
-          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">BDT</div><input type="number" id="f-ace2-bdt" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
-          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">PW</div><input type="number" id="f-ace2-pw" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
-          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Mold</div><input type="number" id="f-ace2-mold" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
-          <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Other</div><input type="number" id="f-ace2-other" class="form-input" min="0" max="100" step="0.1" placeholder="0"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <label class="form-label" style="margin-bottom:0">Loss Time % <span style="color:#9ca3af;font-weight:400">(BDT | PW | Mold | Other)</span></label>
+          <button type="button" id="ace2-loss-toggle" onclick="toggleLoss('ace2')"
+            style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280;cursor:pointer;white-space:nowrap;margin-left:auto">
+            ▼ Lihat
+          </button>
+        </div>
+        <div id="ace2-loss-body" style="display:none">
+          <div class="grid grid-cols-4 gap-2">
+            <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">BDT</div><input type="number" id="f-ace2-bdt" class="form-input" min="0" max="100" step="0.1" placeholder="0" inputmode="decimal"></div>
+            <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">PW</div><input type="number" id="f-ace2-pw" class="form-input" min="0" max="100" step="0.1" placeholder="0" inputmode="decimal"></div>
+            <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Mold</div><input type="number" id="f-ace2-mold" class="form-input" min="0" max="100" step="0.1" placeholder="0" inputmode="decimal"></div>
+            <div><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Other</div><input type="number" id="f-ace2-other" class="form-input" min="0" max="100" step="0.1" placeholder="0" inputmode="decimal"></div>
+          </div>
         </div>
         <div style="font-size:12px;margin-top:5px">Prod%: <span id="ace2-prod-calc" style="font-weight:600;color:#1B2A4A">—</span></div>
       </div>
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="form-label">Reject (pcs)</label><input type="number" id="f-ace2-reject" class="form-input" min="0" step="1" placeholder="0"></div>
+        <div><label class="form-label">Reject (pcs)</label><input type="number" id="f-ace2-reject" class="form-input" min="0" step="1" placeholder="0" inputmode="decimal"></div>
         <div><label class="form-label">Reject % (auto)</label><input type="text" id="f-ace2-reject-pct" class="form-input" readonly style="background:#f9fafb" placeholder="—"></div>
       </div>
     </div>
 
-    <div class="section-head">🟢 Finishing & Core</div>
+    <div class="section-head" style="display:flex;align-items:center">
+      <span>🟢 Finishing &amp; Core</span>
+      <button type="button" onclick="quickFill('finishing')"
+        style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.15);color:white;cursor:pointer">
+        ↩ Salin shift lalu
+      </button>
+    </div>
     <div class="bg-white rounded-xl p-4">
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="form-label">Finishing Prod% (0–100)</label><input type="number" id="f-finishing" class="form-input" min="0" max="100" step="0.1" placeholder="94"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 94%</div></div>
-        <div><label class="form-label">Core Prod% (0–100)</label><input type="number" id="f-core" class="form-input" min="0" max="100" step="0.1" placeholder="97"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 97%</div></div>
+        <div><label class="form-label">Finishing Prod% (0–100)</label><input type="number" id="f-finishing" class="form-input" min="0" max="100" step="0.1" placeholder="94" inputmode="decimal"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 94%</div></div>
+        <div><label class="form-label">Core Prod% (0–100)</label><input type="number" id="f-core" class="form-input" min="0" max="100" step="0.1" placeholder="97" inputmode="decimal"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Target: 97%</div></div>
       </div>
     </div>
 
@@ -301,11 +339,17 @@
       </div>
     </div>
 
-    <div class="section-head">⚡ Energi (Gentani)</div>
+    <div class="section-head" style="display:flex;align-items:center">
+      <span>⚡ Energi (Gentani)</span>
+      <button type="button" onclick="quickFill('gentani')"
+        style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.15);color:white;cursor:pointer">
+        ↩ Salin shift lalu
+      </button>
+    </div>
     <div class="bg-white rounded-xl p-4">
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="form-label">Electrical Furnace (kWH)</label><input type="number" id="f-furnace" class="form-input" min="0" step="1" placeholder="4400"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Total kWH hari ini</div></div>
-        <div><label class="form-label">Non-Furnace (kWH)</label><input type="number" id="f-nonfurnace" class="form-input" min="0" step="1" placeholder="1600"></div>
+        <div><label class="form-label">Electrical Furnace (kWH)</label><input type="number" id="f-furnace" class="form-input" min="0" step="1" placeholder="4400" inputmode="decimal"><div style="font-size:10px;color:#9ca3af;margin-top:2px">Total kWH hari ini</div></div>
+        <div><label class="form-label">Non-Furnace (kWH)</label><input type="number" id="f-nonfurnace" class="form-input" min="0" step="1" placeholder="1600" inputmode="decimal"></div>
       </div>
     </div>
 
@@ -392,6 +436,14 @@
   </div>
 </div>
 
+<!-- ── STICKY SUBMIT (mobile only, di atas bottom nav) ── -->
+<div class="sticky-submit-wrap">
+  <button onclick="document.getElementById('daily-form').dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))"
+    style="width:100%;background:#1B2A4A;color:white;border:none;border-radius:10px;padding:14px;font-size:14px;font-weight:600;cursor:pointer">
+    ✓ Submit Data
+  </button>
+</div>
+
 <script src="js/data-loader.js"></script>
 <script src="js/kpi-engine.js"></script>
 <script src="js/charts.js"></script>
@@ -416,12 +468,67 @@ let currentPage    = 1;
 const PAGE_SIZE    = 30;
 
 // ── Offline detection ──────────────────────────────────────
+const OFFLINE_CACHE_KEY = 'kpi_last_data_ts';
+const SUBMIT_QUEUE_KEY  = 'kpi_submit_queue';
+
 function updateOnlineStatus() {
-  document.body.classList.toggle('offline', !navigator.onLine);
+  const offline = !navigator.onLine;
+  document.body.classList.toggle('offline', offline);
+  if (!offline) _flushSubmitQueue(); // auto-retry saat online kembali
 }
 window.addEventListener('online',  updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 updateOnlineStatus();
+
+// ── Submit queue: simpan payload saat offline, retry saat online ──
+function _enqueueSubmit(sheetName, formData) {
+  const queue = _getQueue();
+  queue.push({ sheetName, formData, timestamp: new Date().toISOString(), retryCount: 0 });
+  localStorage.setItem(SUBMIT_QUEUE_KEY, JSON.stringify(queue));
+  showToast('Offline — data disimpan, akan dikirim otomatis saat online', 'info', 5000);
+}
+
+function _getQueue() {
+  try { return JSON.parse(localStorage.getItem(SUBMIT_QUEUE_KEY) || '[]'); } catch(e) { return []; }
+}
+
+async function _flushSubmitQueue() {
+  const queue = _getQueue();
+  if (queue.length === 0) return;
+
+  showToast(`Online kembali — mengirim ${queue.length} data tertunda...`, 'info', 3000);
+  const remaining = [];
+
+  for (const item of queue) {
+    if (item.retryCount >= 3) continue; // buang setelah 3x gagal
+    try {
+      await submitData(item.sheetName, item.formData);
+      showToast(`✓ Data ${item.timestamp.split('T')[0]} berhasil terkirim`, 'success', 3000);
+    } catch(e) {
+      item.retryCount++;
+      remaining.push(item);
+    }
+  }
+
+  if (remaining.length > 0) {
+    localStorage.setItem(SUBMIT_QUEUE_KEY, JSON.stringify(remaining));
+    showToast(`${remaining.length} data masih gagal terkirim`, 'error', 4000);
+  } else {
+    localStorage.removeItem(SUBMIT_QUEUE_KEY);
+    _dailyRows = null; // force refresh setelah queue flush
+    if (currentView === 'dashboard') loadDashboard();
+  }
+}
+
+// Cek apakah ada queue pending saat pertama load
+(function checkPendingQueue() {
+  const q = _getQueue();
+  if (q.length > 0 && navigator.onLine) {
+    setTimeout(_flushSubmitQueue, 2000); // delay agar app fully loaded
+  } else if (q.length > 0) {
+    showToast(`${q.length} data tertunda akan dikirim saat online`, 'info', 5000);
+  }
+})();
 
 // ── Toast ──────────────────────────────────────────────────
 let _tt;
@@ -436,12 +543,25 @@ function switchTab(view, btn) {
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-'+view).classList.remove('hidden');
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
   currentView = view;
-  if (view === 'dashboard' && !_dailyRows) // Show version in console for debugging
-console.info(`KPI Dashboard v${typeof APP_VERSION !== 'undefined' ? APP_VERSION : '?'} loaded`);
-loadDashboard();
-  if (view === 'history')   loadHistory();
+  _syncBottomNav(view);
+  if (view === 'dashboard' && !_dailyRows) loadDashboard();
+  if (view === 'history') loadHistory();
+}
+
+// Mobile bottom nav — panggil switchTab dengan button yang sesuai
+function switchTabMobile(view) {
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const idx = { dashboard:0, input:1, history:2 }[view];
+  switchTab(view, tabBtns[idx] || null);
+}
+
+// Sync active state bottom nav dengan view aktif
+function _syncBottomNav(view) {
+  document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+  const id = { dashboard:'bnav-dashboard', input:'bnav-input', history:'bnav-history' }[view];
+  if (id) document.getElementById(id)?.classList.add('active');
 }
 
 function setPeriod(period, btn) {
@@ -922,6 +1042,51 @@ function calcLine(prefix) {
 
 function toggleSafety(show) { document.getElementById('safety-detail').classList.toggle('hidden',!show); }
 
+// ── Loss time collapse (Step B) ────────────────────────────
+function toggleLoss(prefix) {
+  const body   = document.getElementById(prefix + '-loss-body');
+  const toggle = document.getElementById(prefix + '-loss-toggle');
+  const open   = body.style.display !== 'none';
+  body.style.display  = open ? 'none' : 'block';
+  toggle.textContent  = open ? '▼ Lihat' : '▲ Sembunyikan';
+}
+
+// ── Quick fill dari shift terakhir (Step B) ────────────────
+// Ambil data terakhir dari historyData (sudah di-fetch), atau dari localStorage draft
+function quickFill(section) {
+  // Coba ambil dari historyData global, atau dari draft localStorage
+  let last = null;
+  if (typeof historyData !== 'undefined' && historyData.length > 0) {
+    last = historyData[0]; // historyData sorted desc, index 0 = paling baru
+  } else {
+    try {
+      const draft = JSON.parse(localStorage.getItem('kpi_form_draft') || '{}');
+      if (draft['f-finishing']) last = {
+        finishing_prod_pct: parseFloat(draft['f-finishing']) / 100,
+        core_prod_pct:      parseFloat(draft['f-core'])      / 100,
+        elec_furnace_kwh:   draft['f-furnace'],
+        elec_nonfurnace_kwh:draft['f-nonfurnace'],
+      };
+    } catch(e) {}
+  }
+
+  if (!last) { showToast('Belum ada data shift sebelumnya', 'info'); return; }
+
+  if (section === 'finishing') {
+    const fin = parseFloat(last.finishing_prod_pct || 0) * 100;
+    const cor = parseFloat(last.core_prod_pct      || 0) * 100;
+    if (fin > 0) document.getElementById('f-finishing').value = fin.toFixed(1);
+    if (cor > 0) document.getElementById('f-core').value      = cor.toFixed(1);
+    showToast(`Disalin: Finishing ${fin.toFixed(1)}%, Core ${cor.toFixed(1)}%`, 'success', 2500);
+  } else if (section === 'gentani') {
+    const furn    = parseFloat(last.elec_furnace_kwh    || 0);
+    const nonfurn = parseFloat(last.elec_nonfurnace_kwh || 0);
+    if (furn    > 0) document.getElementById('f-furnace').value    = furn;
+    if (nonfurn > 0) document.getElementById('f-nonfurnace').value = nonfurn;
+    showToast(`Disalin: Furnace ${furn} kWH, Non-Furn ${nonfurn} kWH`, 'success', 2500);
+  }
+}
+
 const val = id => document.getElementById(id).value.trim();
 const num = id => parseFloat(document.getElementById(id).value)||0;
 
@@ -943,6 +1108,25 @@ function previewForm() {
   prev.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
+// Reset form setelah submit sukses
+function _resetForm() {
+  clearDraft();
+  document.getElementById('daily-form').reset();
+  document.getElementById('f-date').valueAsDate = new Date();
+  document.getElementById('form-preview').classList.add('hidden');
+  document.getElementById('ace1-prod-calc').textContent='—';
+  document.getElementById('ace2-prod-calc').textContent='—';
+  document.querySelector('input[name=safety][value="0"]').checked = true;
+  document.getElementById('safety-detail').classList.add('hidden');
+  // Re-collapse loss sections
+  ['ace1','ace2'].forEach(p => {
+    const body = document.getElementById(p+'-loss-body');
+    const tog  = document.getElementById(p+'-loss-toggle');
+    if (body) body.style.display = 'none';
+    if (tog)  tog.textContent = '▼ Lihat';
+  });
+}
+
 async function handleSubmit(e) {
   e.preventDefault();
   const errEl = document.getElementById('form-error-msg');
@@ -957,39 +1141,39 @@ async function handleSubmit(e) {
   const b2=num('f-ace2-bdt'),p2=num('f-ace2-pw'),m2=num('f-ace2-mold'),o2=num('f-ace2-other');
   const hasSafe = document.querySelector('input[name=safety]:checked').value==='1';
 
-  try {
-    const result = await submitData('DAILY_INPUT', {
-      date:val('f-date'), shift:val('f-shift'), submitted_by:val('f-operator'),
-      ace1_moldh:num('f-ace1-moldh'), ace1_prod_pct:(100-b1-p1-m1-o1)/100,
-      ace1_bdt_loss:b1/100, ace1_pw_loss:p1/100, ace1_mold_loss:m1/100, ace1_other_loss:o1/100,
-      ace2_moldh:num('f-ace2-moldh'), ace2_prod_pct:(100-b2-p2-m2-o2)/100,
-      ace2_bdt_loss:b2/100, ace2_pw_loss:p2/100, ace2_mold_loss:m2/100, ace2_other_loss:o2/100,
-      reject_ace1_pcs:num('f-ace1-reject'), reject_ace2_pcs:num('f-ace2-reject'),
-      output_ace1_mold:num('f-ace1-output'), output_ace2_mold:num('f-ace2-output'),
-      finishing_prod_pct:num('f-finishing')/100, core_prod_pct:num('f-core')/100,
-      safety_incident:hasSafe?1:0, safety_type:hasSafe?val('f-safety-type'):'',
-      safety_desc:hasSafe?val('f-safety-desc'):'',
-      elec_furnace_kwh:num('f-furnace'), elec_nonfurnace_kwh:num('f-nonfurnace'),
-      notes:val('f-notes'),
-    });
+  // Build payload (shared for online submit and offline queue)
+  const _payload = {
+    date:val('f-date'), shift:val('f-shift'), submitted_by:val('f-operator'),
+    ace1_moldh:num('f-ace1-moldh'), ace1_prod_pct:(100-b1-p1-m1-o1)/100,
+    ace1_bdt_loss:b1/100, ace1_pw_loss:p1/100, ace1_mold_loss:m1/100, ace1_other_loss:o1/100,
+    ace2_moldh:num('f-ace2-moldh'), ace2_prod_pct:(100-b2-p2-m2-o2)/100,
+    ace2_bdt_loss:b2/100, ace2_pw_loss:p2/100, ace2_mold_loss:m2/100, ace2_other_loss:o2/100,
+    reject_ace1_pcs:num('f-ace1-reject'), reject_ace2_pcs:num('f-ace2-reject'),
+    output_ace1_mold:num('f-ace1-output'), output_ace2_mold:num('f-ace2-output'),
+    finishing_prod_pct:num('f-finishing')/100, core_prod_pct:num('f-core')/100,
+    safety_incident:hasSafe?1:0, safety_type:hasSafe?val('f-safety-type'):'',
+    safety_desc:hasSafe?val('f-safety-desc'):'',
+    elec_furnace_kwh:num('f-furnace'), elec_nonfurnace_kwh:num('f-nonfurnace'),
+    notes:val('f-notes'),
+  };
 
-    showToast('✓ Data berhasil tersimpan! ID: '+result.id,'success',5000);
-    clearDraft();
-    document.getElementById('daily-form').reset();
-    document.getElementById('f-date').valueAsDate = new Date();
-    document.getElementById('form-preview').classList.add('hidden');
-    document.getElementById('ace1-prod-calc').textContent='—';
-    document.getElementById('ace2-prod-calc').textContent='—';
-    document.querySelector('input[name=safety][value="0"]').checked = true;
-    document.getElementById('safety-detail').classList.add('hidden');
-    _dailyRows = null;
+  try {
+    if (!navigator.onLine) {
+      // Offline → simpan ke queue, kirim otomatis saat online
+      _enqueueSubmit('DAILY_INPUT', _payload);
+      _resetForm();
+    } else {
+      const result = await submitData('DAILY_INPUT', _payload);
+      showToast('✓ Data berhasil tersimpan! ID: '+result.id,'success',5000);
+      _resetForm();
+      _dailyRows = null;
+    }
   } catch(err) {
     errEl.textContent = '❌ Gagal submit: '+err.message;
     errEl.classList.remove('hidden');
-    showToast('Gagal menyimpan data','error');
-    // Save as draft automatically on failure
+    showToast('Gagal menyimpan — data masuk queue offline','error');
+    _enqueueSubmit('DAILY_INPUT', _payload); // fallback ke queue
     saveDraft();
-    showToast('Data disimpan sebagai draft lokal','info',4000);
   } finally {
     btn.disabled=false; btn.textContent='✓ Submit Data'; btn.style.opacity='1';
   }
