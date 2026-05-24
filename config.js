@@ -3,11 +3,13 @@
 // EDIT 3 baris pertama sesuai setup Anda
 // ============================================================
 
-const CONFIG = {
-  // ⚠️ WAJIB DIISI — Web App URL dari Apps Script (Step B)
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbybDT2PBm4Io5y6XVUhHjDLA6-PKJ8sezx03N10rjnA6_tmp64QXUvSBjL6DGlDa8hwBw/exec',
+const APP_VERSION = '6.1.0'; // Phase 6.1 — Quarterly + Custom Date Range
 
-  // ⚠️ WAJIB DIISI — Sheet ID dari URL Google Sheets
+const CONFIG = {
+  // Web App URL dari Apps Script (Step B)
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwrALaM9xueGEDDvqmrOpGFyVFc2KbJT8aLkSKtOFcCzIndl0IvCnlBgS4EKI0ElKlIgg/exec',
+
+  // Sheet ID dari URL Google Sheets
   SHEET_ID: '1ENag8XOGKy8eWNtjaUMENZiqAFGy-INc9-D-fk2yg6A',
 
   // Kode rahasia yang sama dengan tab CONFIG di Sheets
@@ -46,6 +48,13 @@ const KPI_DEFS = [
   { id:'manhour_molding', cat:'Manhour',  label:'Molding MH',      col:'manhour_molding',   target:14.2,  unit:'Man.Min/Mold', fmt:'num1',  lib:true  },
   { id:'safety_incident', cat:'Safety',   label:'Incidents',       col:'safety_incident',   target:0,     unit:'Cases',        fmt:'int',   lib:true  },
 ];
+
+// Chart Y-axis ranges — update jika target mesin berubah
+const CHART_CONFIG = {
+  moldh_min:  110,   // Y-axis min untuk chart Mold/H
+  moldh_max:  165,   // Y-axis max untuk chart Mold/H
+  prod_min:   0.80,  // Y-axis min untuk chart Prod%
+};
 
 // Bulan FY2026 (Apr-26 → Mar-27)
 const MONTHS_FY = [
