@@ -3,6 +3,9 @@
 // Phase 5.3: 4 chart utama + Pareto rejection
 // ============================================================
 
+// Baca chart config dari config.js (fallback ke default jika CHART_CONFIG belum ada)
+const _cc = (typeof CHART_CONFIG !== 'undefined') ? CHART_CONFIG : {};
+
 let _charts = {};
 
 function initChart(id, option) {
@@ -45,7 +48,7 @@ function renderMoldhChart(data) {
       formatter: p => p.map(s => `${s.marker}${s.seriesName}: <b>${s.value !== null ? s.value.toFixed(1) : '—'}</b>`).join('<br>')
     },
     xAxis: { type:'category', data:data.dates, axisLabel:{ ...AXIS_LBL, rotate: data.dates.length > 14 ? 30 : 0 } },
-    yAxis: { type:'value', min:110, max:165, axisLabel:{ ...AXIS_LBL, formatter:'{value}' } },
+    yAxis: { type:'value', min:_cc.moldh_min||110, max:_cc.moldh_max||165, axisLabel:{ ...AXIS_LBL, formatter:'{value}' } },
     series: [
       { name:'ACE-1', type:'line', data:data.ace1, smooth:true,
         lineStyle:{color:C.ace1, width:2.5}, itemStyle:{color:C.ace1}, symbol:'circle', symbolSize:4 },
