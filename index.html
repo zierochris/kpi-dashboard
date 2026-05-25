@@ -192,21 +192,49 @@
 
   <div id="dash-content" class="hidden">
     <div id="dash-empty-banner" style="display:none;background:#FFF8E1;border-radius:8px;padding:9px 13px;font-size:12px;color:#E65100;margin-bottom:10px;border-left:3px solid #E65100"></div>
-    <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">KPI Scorecard</div>
-    <div id="kpi-grid" class="kpi-grid grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-5"></div>
-    <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Trend Produksi & Kualitas</div>
-    <div class="chart-grid grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
-      <div class="chart-box"><div class="chart-title">Mold/Hour — ACE-1 vs ACE-2</div><div id="chart-moldh" style="height:200px"></div></div>
-      <div class="chart-box"><div class="chart-title">Rejection Rate %</div><div id="chart-reject" style="height:200px"></div></div>
-      <div class="chart-box"><div class="chart-title">Productivity %</div><div id="chart-prod" style="height:200px"></div></div>
-      <div class="chart-box"><div class="chart-title">Electrical Energy (kWH/hari)</div><div id="chart-energy" style="height:200px"></div></div>
+
+    <!-- Hero Summary Bar — top 4 metrics at a glance -->
+    <div class="hero-bar" id="hero-bar" style="display:none;margin-bottom:16px">
+      <div class="hero-item">
+        <div class="hero-label">ACE-1 Mold/H</div>
+        <div class="hero-val" id="h-ace1">—</div>
+        <div class="hero-sub" id="h-ace1-s">target 148.5</div>
+      </div>
+      <div class="hero-item">
+        <div class="hero-label">ACE-2 Mold/H</div>
+        <div class="hero-val" id="h-ace2">—</div>
+        <div class="hero-sub" id="h-ace2-s">target 148.5</div>
+      </div>
+      <div class="hero-item">
+        <div class="hero-label">Reject Avg</div>
+        <div class="hero-val" id="h-reject">—</div>
+        <div class="hero-sub" id="h-reject-s">target 1.90%</div>
+      </div>
+      <div class="hero-item">
+        <div class="hero-label">Safety</div>
+        <div class="hero-val" id="h-safety">—</div>
+        <div class="hero-sub">insiden periode ini</div>
+      </div>
     </div>
-    <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Rejection Pareto</div>
+
+    <div class="section-label">KPI Scorecard</div>
+    <div id="kpi-grid" class="kpi-grid grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-5"></div>
+
+    <div class="section-label">Trend Produksi &amp; Kualitas</div>
+    <div class="chart-grid grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+      <div class="chart-box"><div class="chart-title">Mold/Hour — ACE-1 vs ACE-2</div><div id="chart-moldh" style="height:210px"></div></div>
+      <div class="chart-box"><div class="chart-title">Rejection Rate %</div><div id="chart-reject" style="height:210px"></div></div>
+      <div class="chart-box"><div class="chart-title">Productivity %</div><div id="chart-prod" style="height:210px"></div></div>
+      <div class="chart-box"><div class="chart-title">Electrical Energy (kWH/hari)</div><div id="chart-energy" style="height:210px"></div></div>
+    </div>
+
+    <div class="section-label">Rejection Pareto</div>
     <div class="chart-box mb-5">
-      <div class="chart-title">Top Defect Categories <span id="pareto-total" style="font-weight:400;color:#9ca3af"></span></div>
-      <div id="chart-pareto" style="height:220px"></div>
+      <div class="chart-title">Top Defect Categories <span id="pareto-total" style="font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0"></span></div>
+      <div id="chart-pareto" style="height:230px"></div>
     </div>
-    <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">⚠️ KPI Alert</div>
+
+    <div class="section-label">KPI Alert</div>
     <div id="alert-section" class="mb-4"></div>
   </div>
 </div>
@@ -840,6 +868,7 @@ function renderDashboard() {
 
   const cards = buildScorecard(agg);
   renderScorecard(cards, _deltaMap);
+  _updateHeroBar(agg);  // update summary bar
   buildPrintTable(cards);
   const trend     = buildTrendData(rows, 30);
   const prevTrend = _prevRows ? buildTrendData(_prevRows, 30) : null;
@@ -878,25 +907,58 @@ function renderScorecard(cards, deltaMap) {
   }).join('');
 }
 
+// ── Hero Summary Bar ──────────────────────────────────────
+function _updateHeroBar(agg) {
+  const bar = document.getElementById('hero-bar');
+  if (!agg) { if (bar) bar.style.display = 'none'; return; }
+  if (bar) bar.style.display = 'flex';
+  const set = (id, val, color) => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = val; el.style.color = color || 'white'; }
+  };
+  const mC = v => v===null?'rgba(255,255,255,0.4)':v>=148.5?'#86efac':v>=140?'#fde68a':'#fca5a5';
+  const rC = v => v===null?'rgba(255,255,255,0.4)':v<=0.019?'#86efac':v<=0.025?'#fde68a':'#fca5a5';
+  const sC = v => v===null?'rgba(255,255,255,0.4)':v===0?'#86efac':'#fca5a5';
+  const rejAvg = (agg.ace1_reject!==null && agg.ace2_reject!==null)
+    ? (agg.ace1_reject + agg.ace2_reject) / 2
+    : (agg.ace1_reject ?? agg.ace2_reject);
+  const s1 = document.getElementById('h-ace1-s'), s2 = document.getElementById('h-ace2-s');
+  const sr = document.getElementById('h-reject-s');
+  set('h-ace1',   agg.ace1_moldh!==null?agg.ace1_moldh.toFixed(1):'—', mC(agg.ace1_moldh));
+  if(s1) s1.textContent = agg.ace1_moldh!==null?(agg.ace1_moldh>=148.5?'✓ On Target':'↓ Below 148.5'):'no data';
+  set('h-ace2',   agg.ace2_moldh!==null?agg.ace2_moldh.toFixed(1):'—', mC(agg.ace2_moldh));
+  if(s2) s2.textContent = agg.ace2_moldh!==null?(agg.ace2_moldh>=148.5?'✓ On Target':'↓ Below 148.5'):'no data';
+  set('h-reject', rejAvg!==null?(rejAvg*100).toFixed(2)+'%':'—', rC(rejAvg));
+  if(sr) sr.textContent = rejAvg!==null?(rejAvg<=0.019?'✓ On Target':'↑ Above 1.90%'):'no data';
+  set('h-safety', agg.safety_incident!==null?agg.safety_incident:'—', sC(agg.safety_incident));
+}
+
 function renderAlerts(cards) {
-  const el = document.getElementById('alert-section');
+  const el     = document.getElementById('alert-section');
   const alerts = cards.filter(k => k.rag === 'red' || k.rag === 'amber');
   if (!alerts.length) {
-    el.innerHTML = '<div style="background:#E8F5E9;border-radius:10px;padding:14px;text-align:center;color:#1B5E20;font-size:13px">✓ Semua KPI dalam kondisi baik</div>';
+    el.innerHTML = `<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">✅</span>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#166534">Semua KPI dalam kondisi baik</div>
+        <div style="font-size:11px;color:#16a34a;margin-top:2px">Tidak ada alert untuk periode ini</div>
+      </div></div>`;
     return;
   }
   el.innerHTML = alerts.map(a => {
     const style = a.style || RAG_STYLE['nodata'];
-    const gap   = a.gapPct !== null ? ` | Gap: ${(a.gapPct*100).toFixed(1)}%` : '';
-    return `<div class="alert-item ${a.rag==='amber'?'amber':''}">
-      <div>
-        <div style="font-size:12px;font-weight:600">${style.icon} ${a.cat} — ${a.label}</div>
-        <div style="font-size:11px;opacity:.75;margin-top:2px">Actual: ${a.fmtActual} | Target: ${a.fmtTarget} ${a.unit}${gap}</div>
+    const icon  = a.rag==='red'?'🔴':'🟡';
+    const gap   = a.gapPct!==null?` | Gap: ${(a.gapPct*100).toFixed(1)}%`:'';
+    return `<div class="alert-item ${a.rag==='amber'?'amber':''}" style="margin-bottom:8px">
+      <span style="font-size:18px;flex-shrink:0;margin-top:1px">${icon}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:#111827">${a.cat} — ${a.label}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">Actual: <strong>${a.fmtActual}</strong> | Target: ${a.fmtTarget} ${a.unit}${gap}</div>
       </div>
+      <span style="font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;flex-shrink:0;${a.rag==='red'?'background:#FEE2E2;color:#991B1B':'background:#FEF3C7;color:#92400E'}">${style.label}</span>
     </div>`;
   }).join('');
 }
-
 // ── Print / BOD View ───────────────────────────────────────
 function buildPrintTable(cards) {
   const labels = {today:'Hari Ini', week:'7 Hari', month:'Bulan Ini', ytd:'YTD FY26'};
