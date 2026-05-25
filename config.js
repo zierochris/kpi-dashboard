@@ -3,7 +3,7 @@
 // EDIT 3 baris pertama sesuai setup Anda
 // ============================================================
 
-const APP_VERSION = '6.1.0'; // Phase 6.1 — Quarterly + Custom Date Range
+const APP_VERSION = '6.4.0'; // Phase 6.4 — Performance & Data Architecture
 
 const CONFIG = {
   // Web App URL dari Apps Script (Step B)
@@ -23,11 +23,15 @@ const CONFIG = {
   FY_LABEL: 'FY2026',
 
   // Threshold RAG status
-  NEAR_MISS_PCT: 0.05,   // 5%  = amber
-  CRITICAL_PCT:  0.10,   // 10% = red
+  NEAR_MISS_PCT: 0.05,
+  CRITICAL_PCT:  0.10,
 
   // Auto-refresh data setiap N menit (0 = nonaktif)
   AUTO_REFRESH_MINUTES: 10,
+
+  // Performance debug logging — set true untuk lihat fetch times di Console
+  // Format: [KPI] Fetched: DAILY_INPUT in 1.24s — 245 rows
+  DEBUG_MODE: false,
 };
 
 // ============================================================

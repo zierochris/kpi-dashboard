@@ -433,6 +433,8 @@
         <button id="btn-next" onclick="changePage(1)"  class="filter-btn apply" style="padding:4px 12px">Berikutnya →</button>
       </div>
     </div>
+    <!-- Sentinel: IntersectionObserver auto-loads next page saat scroll ke bawah -->
+    <div id="hist-sentinel" style="height:4px"></div>
   </div>
 </div>
 
@@ -693,14 +695,25 @@ async function loadDashboard() {
     return showDashError('Sheet ID belum diisi di config.js');
   }
   try {
-    const [daily, monthly, rej] = await Promise.allSettled([
-      getDailyInputs({ days: 180 }), getMonthlySummary(), getRejectionDetail()
+    const _t0 = Date.now();
+
+    // Fetch daily + monthly paralel — Rejection LAZY via IntersectionObserver (Step C)
+    const [daily, monthly] = await Promise.allSettled([
+      getDailyInputs({ days: 180 }),
+      getMonthlySummary(),
     ]);
     _dailyRows   = daily.status   === 'fulfilled' ? daily.value   : [];
     _monthlyRows = monthly.status === 'fulfilled' ? monthly.value : [];
-    _rejRows     = rej.status     === 'fulfilled' ? rej.value     : [];
+    // _rejRows = null → diisi saat Pareto section masuk viewport
+
     if (daily.status === 'rejected') throw daily.reason;
+
     renderDashboard();
+    _setupParetoObserver(); // lazy init Pareto
+
+    const ms = Date.now() - _t0;
+    if (typeof dbg === 'function') dbg(`Dashboard ready in ${(ms/1000).toFixed(2)}s — ${_dailyRows.length} rows`);
+
     const lu = document.getElementById('last-updated');
     lu.textContent = 'Update: ' + new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
     lu.style.display = 'block';
@@ -711,6 +724,66 @@ function showDashError(msg) {
   document.getElementById('dash-loading').classList.add('hidden');
   document.getElementById('dash-error').classList.remove('hidden');
   document.getElementById('dash-error-msg').textContent = msg;
+}
+
+// ── Step C: Lazy fetch Rejection Detail ───────────────────
+let _paretoObserver = null;
+let _paretoLoaded   = false;
+
+function _setupParetoObserver() {
+  _paretoLoaded = false;
+  const el = document.getElementById('chart-pareto');
+  if (!el) return;
+
+  // Tampilkan placeholder loading
+  el.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#9ca3af">
+    <div style="font-size:13px">📊 Pareto data dimuat saat bagian ini terlihat</div>
+    <div style="font-size:11px">Scroll ke bawah untuk memuat</div>
+  </div>`;
+
+  if (_paretoObserver) _paretoObserver.disconnect();
+
+  if (!('IntersectionObserver' in window)) {
+    // Fallback: langsung load jika browser tidak support IO
+    _loadRejectionData();
+    return;
+  }
+
+  _paretoObserver = new IntersectionObserver(async entries => {
+    if (entries[0].isIntersecting && !_paretoLoaded) {
+      _paretoObserver.disconnect();
+      await _loadRejectionData();
+    }
+  }, { threshold: 0.1 });
+
+  _paretoObserver.observe(el);
+}
+
+async function _loadRejectionData() {
+  if (_paretoLoaded) return;
+  _paretoLoaded = true;
+
+  const el = document.getElementById('chart-pareto');
+  if (el) el.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;gap:10px;color:#9ca3af">
+    <div class="spinner" style="width:20px;height:20px;border-width:2px"></div>
+    <span style="font-size:12px">Memuat data Pareto...</span>
+  </div>`;
+
+  try {
+    const t0    = Date.now();
+    _rejRows    = await getRejectionDetail();
+    if (typeof dbg === 'function') dbg(`Pareto loaded in ${((Date.now()-t0)/1000).toFixed(2)}s — ${_rejRows.length} rows`);
+
+    const p  = buildRejectPareto(_rejRows);
+    renderParetoChart(p);
+    const pt = document.getElementById('pareto-total');
+    if (pt) pt.textContent = p.total > 0 ? `— Total: ${p.total.toLocaleString()} pcs` : '';
+  } catch(e) {
+    if (el) el.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:12px">
+      Gagal memuat Rejection Detail — isi tab REJECTION_DETAIL di Google Sheets
+    </div>`;
+    _paretoLoaded = false; // allow retry on next scroll
+  }
 }
 
 function renderDashboard() {
@@ -768,15 +841,11 @@ function renderDashboard() {
   const cards = buildScorecard(agg);
   renderScorecard(cards, _deltaMap);
   buildPrintTable(cards);
-  // Pass prev trend data to charts for overlay
   const trend     = buildTrendData(rows, 30);
   const prevTrend = _prevRows ? buildTrendData(_prevRows, 30) : null;
-  renderAllCharts(trend, buildRejectPareto(_rejRows || []), prevTrend);
+  // Pareto di-render secara lazy via _setupParetoObserver — tidak di sini
+  renderAllCharts(trend, null, prevTrend);
   renderAlerts(cards);
-
-  const pt = document.getElementById('pareto-total');
-  const p  = buildRejectPareto(_rejRows || []);
-  pt.textContent = p.total > 0 ? `— Total: ${p.total.toLocaleString()} pcs` : '';
 }
 
 function renderScorecard(cards, deltaMap) {
@@ -866,6 +935,7 @@ async function loadHistory() {
     filteredData = [...historyData].sort((a,b) => String(b.date).localeCompare(String(a.date)));
     currentPage  = 1;
     renderHistoryTable();
+    _setupSentinel(); // aktifkan auto-pagination saat scroll
   } catch(err) {
     document.getElementById('hist-loading').classList.add('hidden');
     document.getElementById('hist-table').classList.remove('hidden');
@@ -873,6 +943,24 @@ async function loadHistory() {
       `<tr><td colspan="8" style="padding:20px;text-align:center;color:#C62828">⚠️ ${err.message}</td></tr>`;
     document.getElementById('history-count').textContent = 'Error';
   }
+}
+
+// IntersectionObserver: auto-load halaman berikutnya saat sentinel terlihat
+let _sentinelObserver = null;
+function _setupSentinel() {
+  if (_sentinelObserver) _sentinelObserver.disconnect();
+  const sentinel = document.getElementById('hist-sentinel');
+  if (!sentinel || !('IntersectionObserver' in window)) return;
+  _sentinelObserver = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) {
+      const total = Math.ceil(filteredData.length / PAGE_SIZE);
+      if (currentPage < total) {
+        currentPage++;
+        renderHistoryTable();
+      }
+    }
+  }, { rootMargin: '100px' }); // trigger 100px sebelum sentinel terlihat
+  _sentinelObserver.observe(sentinel);
 }
 
 function applyFilter() {
@@ -1191,10 +1279,19 @@ async function manualRefresh() {
 }
 
 // ── Init ───────────────────────────────────────────────────
+// dbg() wrapper — mirror dari data-loader.js, tersedia global di index.html
+function dbg(...args) {
+  if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG_MODE) console.info('[KPI]', ...args);
+}
+
 document.getElementById('header-company').textContent = CONFIG.COMPANY_NAME;
+console.info(`KPI Dashboard v${APP_VERSION} | Sheet: ${CONFIG.SHEET_ID.slice(0,8)}... | DEBUG_MODE: ${CONFIG.DEBUG_MODE}`);
+
 loadDashboard();
+
 if (CONFIG.AUTO_REFRESH_MINUTES > 0) {
   setInterval(manualRefresh, CONFIG.AUTO_REFRESH_MINUTES * 60 * 1000);
+  dbg(`Auto-refresh setiap ${CONFIG.AUTO_REFRESH_MINUTES} menit aktif`);
 }
 </script>
 </body>
